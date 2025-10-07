@@ -1,0 +1,24 @@
+[
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "id", "type": "bytes32" }
+    ],
+    "name": "getAddress",
+    "outputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "id", "type": "bytes32" }
+    ],
+    "name": "getUint",
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

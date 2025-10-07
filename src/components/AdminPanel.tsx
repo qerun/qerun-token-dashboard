@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
 import QerunSwapAbi from '../abi/QerunSwap.json';
-import { CONTRACT_ADDRESSES } from '../config';
+import StateManagerAbi from '../abi/StateManager.json';
+import { CONTRACT_CONFIG, QERUN_IDS } from '../config';
 
 const AdminPanel: React.FC = () => {
-  const swapAddress = CONTRACT_ADDRESSES.swap;
-  const defaultQuote = CONTRACT_ADDRESSES.usd;
-
+  const [swapAddress, setSwapAddress] = useState<string | null>(null);
+  const [defaultQuote, setDefaultQuote] = useState<string | null>(null);
   const [currentPairs, setCurrentPairs] = useState<string[]>([]);
   const [draftPairs, setDraftPairs] = useState<string[]>([]);
   const [inputAddress, setInputAddress] = useState('');
@@ -31,7 +31,21 @@ const AdminPanel: React.FC = () => {
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
-      const contract = new ethers.Contract(swapAddress, QerunSwapAbi, provider);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const [swapAddr, quoteAddr] = await Promise.all([
+        stateManager.getAddress(QERUN_IDS.SWAP_CONTRACT),
+        stateManager.getAddress(QERUN_IDS.PRIMARY_QUOTE),
+      ]);
+      if (!swapAddr || swapAddr === ethers.ZeroAddress) {
+        throw new Error('StateManager missing swap contract address');
+      }
+      if (!quoteAddr || quoteAddr === ethers.ZeroAddress) {
+        throw new Error('StateManager missing quote token address');
+      }
+      setSwapAddress(swapAddr);
+      setDefaultQuote(quoteAddr);
+
+      const contract = new ethers.Contract(swapAddr, QerunSwapAbi, provider);
       const pairs: string[] = await contract.allPairs();
       const normalised = pairs.map(addr => ethers.getAddress(addr));
       setCurrentPairs(normalised);
@@ -72,7 +86,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleIncludeDefault = () => {
-    const checksummed = normaliseAddress(defaultQuote);
+    const checksummed = normaliseAddress(defaultQuote ?? '');
     if (!checksummed) return;
     if (!draftPairs.includes(checksummed)) {
       setDraftPairs(prev => [...prev, checksummed]);
@@ -86,6 +100,10 @@ const AdminPanel: React.FC = () => {
     }
     if (draftPairs.length === 0) {
       setStatus('At least one quote token address is required.');
+      return;
+    }
+    if (!swapAddress) {
+      setStatus('Swap contract address not available yet.');
       return;
     }
 
@@ -141,7 +159,7 @@ const AdminPanel: React.FC = () => {
         </button>
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <button type="button" onClick={handleIncludeDefault} style={{ padding: '6px 12px' }}>
+        <button type="button" onClick={handleIncludeDefault} style={{ padding: '6px 12px' }} disabled={!defaultQuote}>
           Include USD token
         </button>
         <button type="button" onClick={handleReset} style={{ padding: '6px 12px' }}>

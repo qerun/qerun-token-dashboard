@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import QerunSwapAbi from '../abi/QerunSwap.json';
-import { CONTRACT_ADDRESSES, DEFAULT_DECIMALS } from '../config';
+import StateManagerAbi from '../abi/StateManager.json';
+import { CONTRACT_CONFIG, DEFAULT_DECIMALS, QERUN_IDS } from '../config';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -10,10 +11,14 @@ const ERC20_ABI = [
 ];
 const BPS = 10_000n;
 
+type ResolvedAddresses = {
+  swap: string;
+  usd: string;
+  qer: string;
+};
+
 const Swap: React.FC = () => {
-  const swapAddress = CONTRACT_ADDRESSES.swap;
-  const usdTokenAddress = CONTRACT_ADDRESSES.usd;
-  const qerTokenAddress = CONTRACT_ADDRESSES.qer;
+  const [addresses, setAddresses] = useState<ResolvedAddresses | null>(null);
   const [account, setAccount] = useState<string>('');
   const [usdBalance, setUsdBalance] = useState<string>('0');
   const [qerBalance, setQerBalance] = useState<string>('0');
@@ -33,10 +38,11 @@ const Swap: React.FC = () => {
     const network = await provider.getNetwork();
     const chainId = network?.chainId?.toString();
 
-    if (chainId !== CONTRACT_ADDRESSES.chainId) {
+    if (chainId !== CONTRACT_CONFIG.chainId) {
       setNetworkWarning(
-        `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_ADDRESSES.chainId}.`,
+        `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_CONFIG.chainId}.`,
       );
+      setAddresses(null);
       setAccount('');
       setUsdBalance('0');
       setQerBalance('0');
@@ -53,6 +59,40 @@ const Swap: React.FC = () => {
     const activeAccount = accounts[0];
     setAccount(activeAccount);
 
+    let resolved: ResolvedAddresses;
+    try {
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const [qerFromState, usdFromState, swapFromState] = await Promise.all([
+        stateManager.getAddress(QERUN_IDS.MAIN_CONTRACT),
+        stateManager.getAddress(QERUN_IDS.PRIMARY_QUOTE),
+        stateManager.getAddress(QERUN_IDS.SWAP_CONTRACT),
+      ]);
+
+      if (
+        !qerFromState ||
+        qerFromState === ethers.ZeroAddress ||
+        !usdFromState ||
+        usdFromState === ethers.ZeroAddress ||
+        !swapFromState ||
+        swapFromState === ethers.ZeroAddress
+      ) {
+        throw new Error('StateManager missing required contract addresses');
+      }
+
+      resolved = {
+        qer: qerFromState,
+        usd: usdFromState,
+        swap: swapFromState,
+      };
+      setAddresses(resolved);
+    } catch (error) {
+      console.error('Failed to resolve contract addresses from StateManager', error);
+      setAddresses(null);
+      setNetworkWarning('Unable to load contract addresses from StateManager. Check deployment configuration.');
+      return;
+    }
+
+    const { swap: swapAddress, usd: usdTokenAddress, qer: qerTokenAddress } = resolved;
     const usdToken = new ethers.Contract(usdTokenAddress, ERC20_ABI, provider);
     const qerToken = new ethers.Contract(qerTokenAddress, ERC20_ABI, provider);
 
@@ -99,7 +139,7 @@ const Swap: React.FC = () => {
       setReserveUsd(0n);
       setFeeBps(0n);
     }
-  }, [qerTokenAddress, swapAddress, usdTokenAddress]);
+  }, []);
 
   useEffect(() => {
     loadState();
@@ -149,6 +189,11 @@ const Swap: React.FC = () => {
     }
 
     try {
+      if (!addresses) {
+        alert('Contract addresses not loaded yet');
+        return;
+      }
+      const { swap: swapAddress, usd: usdTokenAddress, qer: qerTokenAddress } = addresses;
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(swapAddress, QerunSwapAbi, signer);
