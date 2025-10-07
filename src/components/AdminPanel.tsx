@@ -12,6 +12,9 @@ const AdminPanel: React.FC = () => {
   const [inputAddress, setInputAddress] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [treasuryAddress, setTreasuryAddress] = useState<string | null>(null);
+  const [treasuryQerBalance, setTreasuryQerBalance] = useState<string | null>(null);
+  const [qerTokenAddress, setQerTokenAddress] = useState<string | null>(null);
 
   const hasWallet = useMemo(() => Boolean(window.ethereum), []);
 
@@ -59,8 +62,21 @@ const AdminPanel: React.FC = () => {
 
       const swapAddr = await requireAddress(QERUN_IDS.SWAP_CONTRACT, 'StateManager missing swap contract address');
       const quoteAddr = await requireAddress(QERUN_IDS.PRIMARY_QUOTE, 'StateManager missing quote token address');
+      const qerAddr = await requireAddress(QERUN_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
+      const treasuryAddr = await requireAddress(QERUN_IDS.TREASURY, 'StateManager missing treasury address');
+
       setSwapAddress(swapAddr);
       setDefaultQuote(quoteAddr);
+      setQerTokenAddress(qerAddr);
+      setTreasuryAddress(treasuryAddr);
+
+      try {
+        const qerToken = new ethers.Contract(qerAddr, ERC20_ABI, provider);
+        const balance = await qerToken.balanceOf(treasuryAddr);
+        setTreasuryQerBalance(ethers.formatUnits(balance, 18));
+      } catch {
+        setTreasuryQerBalance(null);
+      }
 
       const contract = new ethers.Contract(swapAddr, QerunSwapAbi, provider);
       const pairs: string[] = await contract.allPairs();
@@ -71,6 +87,11 @@ const AdminPanel: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to load pairs: ${message}`);
+      setTreasuryAddress(null);
+      setTreasuryQerBalance(null);
+      setQerTokenAddress(null);
+      setSwapAddress(null);
+      setDefaultQuote(null);
     }
   }, []);
 
@@ -158,6 +179,13 @@ const AdminPanel: React.FC = () => {
         Manage the list of quote tokens that the swap contract recognises. The list you submit replaces the on-chain
         whitelist, so include every token you want to keep active.
       </p>
+      {treasuryAddress && (
+        <div style={{ marginBottom: 12, fontSize: 14 }}>
+          <div><b>Treasury:</b> {treasuryAddress}</div>
+          <div><b>QER Token:</b> {qerTokenAddress}</div>
+          <div><b>Treasury QER Balance:</b> {treasuryQerBalance ?? '—'}</div>
+        </div>
+      )}
       {!hasWallet && (
         <p style={{ color: '#d32f2f', fontWeight: 500 }}>
           No wallet detected. Connect with an admin account to fetch or update pairs.
