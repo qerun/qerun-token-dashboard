@@ -32,17 +32,33 @@ const AdminPanel: React.FC = () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
-      const getAddress = stateManager.getFunction('getAddress');
-      const [swapAddr, quoteAddr] = await Promise.all([
-        getAddress(QERUN_IDS.SWAP_CONTRACT),
-        getAddress(QERUN_IDS.PRIMARY_QUOTE),
-      ]);
-      if (!swapAddr || swapAddr === ethers.ZeroAddress) {
-        throw new Error('StateManager missing swap contract address');
-      }
-      if (!quoteAddr || quoteAddr === ethers.ZeroAddress) {
-        throw new Error('StateManager missing quote token address');
-      }
+      const getAddress = stateManager.getFunction('getAddress(bytes32)');
+      const hasEntry = (() => {
+        try {
+          return stateManager.getFunction('has(bytes32)');
+        } catch {
+          return undefined;
+        }
+      })();
+
+      const requireAddress = async (id: string, label: string) => {
+        if (hasEntry) {
+          try {
+            const has = await hasEntry(id);
+            if (!has) throw new Error(label);
+          } catch {
+            throw new Error(label);
+          }
+        }
+        try {
+          return await getAddress(id);
+        } catch {
+          throw new Error(label);
+        }
+      };
+
+      const swapAddr = await requireAddress(QERUN_IDS.SWAP_CONTRACT, 'StateManager missing swap contract address');
+      const quoteAddr = await requireAddress(QERUN_IDS.PRIMARY_QUOTE, 'StateManager missing quote token address');
       setSwapAddress(swapAddr);
       setDefaultQuote(quoteAddr);
 

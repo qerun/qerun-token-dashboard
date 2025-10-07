@@ -20,5 +20,16 @@
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "id", "type": "bytes32" }
+    ],
+    "name": "has",
+    "outputs": [
+      { "internalType": "bool", "name": "", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ]
