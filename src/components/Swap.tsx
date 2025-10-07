@@ -61,15 +61,15 @@ const Swap: React.FC = () => {
 
         let resolved: ResolvedAddresses;
         try {
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
-      const hasEntry = (() => {
-        try {
-          return stateManager.getFunction('has(bytes32)');
-        } catch {
-          return undefined;
-        }
-      })();
+            const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+            const getAddress = stateManager.getFunction('getAddress');
+            const hasEntry = (() => {
+                try {
+                    return stateManager.getFunction('has');
+                } catch {
+                    return undefined;
+                }
+            })();
             const requireAddress = async (id: string): Promise<string> => {
                 if (hasEntry) {
                     try {
