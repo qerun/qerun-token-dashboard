@@ -1,9 +1,3 @@
-// Add type for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
 import React from 'react';
 
 const Connect: React.FC = () => {
