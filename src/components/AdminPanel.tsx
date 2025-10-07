@@ -15,6 +15,7 @@ const AdminPanel: React.FC = () => {
   const [treasuryAddress, setTreasuryAddress] = useState<string | null>(null);
   const [treasuryQerBalance, setTreasuryQerBalance] = useState<string | null>(null);
   const [qerTokenAddress, setQerTokenAddress] = useState<string | null>(null);
+  const [configEntries, setConfigEntries] = useState<Array<{ id: string; label: string; value: string }>>([]);
 
   const hasWallet = useMemo(() => Boolean(window.ethereum), []);
 
@@ -65,6 +66,17 @@ const AdminPanel: React.FC = () => {
       const qerAddr = await requireAddress(QERUN_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
       const treasuryAddr = await requireAddress(QERUN_IDS.TREASURY, 'StateManager missing treasury address');
 
+      const entries: Array<{ id: string; label: string; value: string }> = [];
+      const appendEntry = (label: string, value: string) => {
+        entries.push({ id: label, label, value });
+      };
+      appendEntry('QER Token', qerAddr);
+      appendEntry('Treasury', treasuryAddr);
+      appendEntry('Primary Quote', quoteAddr);
+      appendEntry('Swap', swapAddr);
+      appendEntry('Swap Fee (bps)', (await stateManager.getUint(QERUN_IDS.SWAP_FEE_BPS)).toString());
+      setConfigEntries(entries);
+
       setSwapAddress(swapAddr);
       setDefaultQuote(quoteAddr);
       setQerTokenAddress(qerAddr);
@@ -87,6 +99,7 @@ const AdminPanel: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to load pairs: ${message}`);
+      setConfigEntries([]);
       setTreasuryAddress(null);
       setTreasuryQerBalance(null);
       setQerTokenAddress(null);
@@ -270,6 +283,18 @@ const AdminPanel: React.FC = () => {
           </ul>
         )}
       </div>
+      {configEntries.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <strong>StateManager Registry:</strong>
+          <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+            {configEntries.map(entry => (
+              <li key={entry.label}>
+                <b>{entry.label}:</b> {entry.value}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 };
