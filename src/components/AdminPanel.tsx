@@ -32,9 +32,10 @@ const AdminPanel: React.FC = () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const getAddress = stateManager.getFunction('getAddress');
       const [swapAddr, quoteAddr] = await Promise.all([
-        stateManager.getAddress(QERUN_IDS.SWAP_CONTRACT),
-        stateManager.getAddress(QERUN_IDS.PRIMARY_QUOTE),
+        getAddress(QERUN_IDS.SWAP_CONTRACT),
+        getAddress(QERUN_IDS.PRIMARY_QUOTE),
       ]);
       if (!swapAddr || swapAddr === ethers.ZeroAddress) {
         throw new Error('StateManager missing swap contract address');

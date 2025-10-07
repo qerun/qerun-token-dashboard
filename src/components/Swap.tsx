@@ -62,10 +62,11 @@ const Swap: React.FC = () => {
     let resolved: ResolvedAddresses;
     try {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const getAddress = stateManager.getFunction('getAddress');
       const [qerFromState, usdFromState, swapFromState] = await Promise.all([
-        stateManager.getAddress(QERUN_IDS.MAIN_CONTRACT),
-        stateManager.getAddress(QERUN_IDS.PRIMARY_QUOTE),
-        stateManager.getAddress(QERUN_IDS.SWAP_CONTRACT),
+        getAddress(QERUN_IDS.MAIN_CONTRACT),
+        getAddress(QERUN_IDS.PRIMARY_QUOTE),
+        getAddress(QERUN_IDS.SWAP_CONTRACT),
       ]);
 
       if (
