@@ -56,7 +56,7 @@ const AdminPanel: React.FC = () => {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to load pairs: ${message}`);
     }
-  }, [swapAddress]);
+  }, []);
 
   useEffect(() => {
     loadPairs();

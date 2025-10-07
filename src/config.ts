@@ -1,6 +1,4 @@
-const REQUIRED_KEYS = ['VITE_STATE_MANAGER_ADDRESS'] as const;
-
-type RequiredKey = typeof REQUIRED_KEYS[number];
+type RequiredKey = 'VITE_STATE_MANAGER_ADDRESS';
 
 function requireEnv(key: RequiredKey): string {
   const value = import.meta.env[key];
