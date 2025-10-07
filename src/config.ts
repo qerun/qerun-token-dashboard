@@ -1,8 +1,20 @@
+const REQUIRED_KEYS = ['VITE_SWAP_ADDRESS', 'VITE_USD_TOKEN_ADDRESS', 'VITE_QER_TOKEN_ADDRESS'] as const;
+
+type RequiredKey = typeof REQUIRED_KEYS[number];
+
+function requireEnv(key: RequiredKey): string {
+  const value = import.meta.env[key];
+  if (!value) {
+    throw new Error(`Missing environment variable ${key}. Check your .env configuration.`);
+  }
+  return value;
+}
+
 export const CONTRACT_ADDRESSES = {
-  swap: '0x4A679253410272dd5232B3Ff7cF5dbB88f295319',
-  usd: '0x0B306BF915C4d645ff596e518fAf3F9669b97016',
-  qer: '0xc6e7DF5E7b4f2A278906862b61205850344D4e7d',
-  chainId: '31337',
+  swap: requireEnv('VITE_SWAP_ADDRESS'),
+  usd: requireEnv('VITE_USD_TOKEN_ADDRESS'),
+  qer: requireEnv('VITE_QER_TOKEN_ADDRESS'),
+  chainId: import.meta.env.VITE_CHAIN_ID ?? '31337',
 } as const;
 
 export const DEFAULT_DECIMALS = {
