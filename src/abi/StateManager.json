@@ -225,8 +225,36 @@
         "type": "address"
       }
     ],
-    "name": "TokenExternalChecksUpdated",
+    "name": "TokenGovernanceUpdated",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "applyTokenGovernance",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
@@ -460,34 +488,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "runTokenExternalChecks",
-    "outputs": [],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "bytes32",
         "name": "id",
         "type": "bytes32"
@@ -585,7 +585,7 @@
         "type": "address[]"
       }
     ],
-    "name": "setTokenExternalChecks",
+    "name": "setTokenGovernanceModules",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -615,7 +615,7 @@
   },
   {
     "inputs": [],
-    "name": "tokenExternalChecks",
+    "name": "tokenGovernanceModules",
     "outputs": [
       {
         "internalType": "address[]",
