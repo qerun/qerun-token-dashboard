@@ -1,11 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Connect: React.FC = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [account, setAccount] = useState('');
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts && accounts.length > 0) {
+            setIsConnected(true);
+            setAccount(accounts[0]);
+          }
+        } catch (err) {
+          console.error('Error checking connection:', err);
+        }
+      }
+    };
+
+    checkConnection();
+
+    // Listen for account changes
+    if (window.ethereum) {
+      (window.ethereum as any).on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length > 0) {
+          setIsConnected(true);
+          setAccount(accounts[0]);
+        } else {
+          setIsConnected(false);
+          setAccount('');
+        }
+      });
+    }
+
+    return () => {
+      if (window.ethereum) {
+        (window.ethereum as any).removeListener('accountsChanged', () => {});
+      }
+    };
+  }, []);
+
   const handleConnect = async () => {
     if (window.ethereum) {
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
-        alert('Wallet connected!');
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          setIsConnected(true);
+          setAccount(accounts[0]);
+        }
       } catch (err) {
         alert('Connection failed: ' + (err as Error).message);
       }
@@ -14,24 +58,26 @@ const Connect: React.FC = () => {
     }
   };
 
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    setAccount('');
+    // Note: MetaMask doesn't have a disconnect method, but we can clear local state
+  };
+
   return (
     <button
-      onClick={handleConnect}
+      onClick={isConnected ? handleDisconnect : handleConnect}
       style={{
-        position: 'absolute',
-        top: 20,
-        right: 20,
         padding: '8px 16px',
         fontSize: '16px',
         borderRadius: '4px',
         border: 'none',
-        background: '#43a047',
+        background: isConnected ? '#f44336' : '#43a047',
         color: '#fff',
         cursor: 'pointer',
-        zIndex: 10,
       }}
     >
-      Connect Wallet
+      {isConnected ? `Disconnect (${account.slice(0, 6)}...${account.slice(-4)})` : 'Connect Wallet'}
     </button>
   );
 };

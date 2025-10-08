@@ -1,0 +1,229 @@
+:root {
+  --qerun-bg: #120806;
+  --qerun-card: oklab(16.5764% .0262622 .0170209 / .8);
+  --qerun-gold: #f7d976;
+  --qerun-accent: #8b0000;
+  --qerun-text: #fffcf5;
+  --qerun-text-muted: #ffefc9;
+  --qerun-button-bg: #f7d976;
+  --qerun-button-text: #2d0e0e;
+  --qerun-border: #f7d976;
+  --qerun-radius-xl: 1rem;
+  --qerun-radius-xxl: 1.5rem;
+  --qerun-radius-round: 999px;
+  --qerun-spacing-xs: 0.25rem;
+  --qerun-spacing-sm: 0.5rem;
+  --qerun-spacing-md: 1rem;
+  --qerun-spacing-lg: 2rem;
+  --qerun-font-family: 'Inter', 'Segoe UI', sans-serif;
+  --qerun-font-weight-medium: 500;
+  --qerun-font-weight-semibold: 600;
+}
+
+.qerunPage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background-image:
+    radial-gradient(circle at 20% -10%, rgba(247, 217, 118, 0.45), transparent 55%),
+    radial-gradient(circle at 80% 0%, rgba(139, 0, 0, 0.4), transparent 60%);
+  background-color: var(--qerun-bg);
+  box-sizing: border-box;
+  color: var(--qerun-text);
+  font-family: var(--qerun-font-family);
+  overflow-y: auto;
+}
+
+.qerunLayout {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 72px 16px 96px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+@media (min-width: 600px) {
+  .qerunLayout {
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 48px;
+  }
+}
+
+.qerunCard {
+  position: relative;
+  background: var(--qerun-card);
+  backdrop-filter: blur(10px);
+  border-radius: var(--qerun-radius-xl);
+  padding: 24px 12px;
+  border: 1px solid rgba(255, 193, 92, 0.25);
+  box-shadow: 0 30px 80px rgba(73, 51, 12, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (min-width: 600px) {
+  .qerunCard {
+    padding: 32px;
+  }
+}
+
+.qerunBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 217, 118, 0.4);
+  background: rgba(247, 217, 118, 0.15);
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: #f9e7a9;
+  text-transform: uppercase;
+}
+
+.qerunLogoContainer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qerunLogo {
+  filter: drop-shadow(0 8px 20px rgba(247, 217, 118, 0.35));
+}
+
+.qerunHeroTitle {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--qerun-gold);
+}
+
+.qerunCardTitle {
+  margin: 0;
+  font-size: 26px;
+  font-weight: var(--qerun-font-weight-semibold);
+  color: var(--qerun-gold);
+}
+
+.qerunCardSubtitle {
+  margin: 0;
+  font-size: 16px;
+  color: var(--qerun-text-muted);
+  font-family: var(--qerun-font-family);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--qerun-spacing-sm);
+}
+
+.qerunMetricsPanel {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  background: var(--qerun-card);
+  border-radius: var(--qerun-radius-xl);
+  padding: 16px;
+}
+
+.qerunMetricCard {
+  background: var(--qerun-card);
+  border: 1px solid rgba(255, 208, 108, 0.18);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.qerunMetricLabel {
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--qerun-gold);
+  margin-bottom: 4px;
+}
+
+.qerunMetricValue {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fffcf7;
+}
+
+.qerunSelectorGroup {
+  display: grid;
+  gap: 16px;
+}
+
+.qerunLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 225, 185, 0.78);
+}
+
+.qerunSelect {
+  width: 100%;
+  padding: var(--qerun-spacing-md);
+  border-radius: var(--qerun-radius-xl);
+  border: 1px solid var(--qerun-border);
+  background: var(--qerun-card);
+  color: var(--qerun-text);
+  font-size: 16px;
+  appearance: none;
+}
+
+.qerunInput {
+  width: 100%;
+  padding: var(--qerun-spacing-md);
+  border-radius: var(--qerun-radius-xl);
+  border: 1px solid var(--qerun-border);
+  background: var(--qerun-card);
+  color: var(--qerun-text);
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-sizing: border-box;
+}
+
+.qerunInput[type="number"]::-webkit-outer-spin-button,
+.qerunInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qerunSwapButton {
+  margin-top: var(--qerun-spacing-md);
+  padding: var(--qerun-spacing-lg);
+  border-radius: var(--qerun-radius-xl);
+  border: none;
+  font-size: 18px;
+  font-weight: var(--qerun-font-weight-semibold);
+  background: var(--qerun-button-bg);
+  color: var(--qerun-button-text);
+  cursor: pointer;
+  box-shadow: 0 8px 24px 0 #f7d97699;
+  transition: transform 0.15s cubic-bezier(.4, 0, .2, 1), box-shadow 0.15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.qerunFooterNote {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 233, 190, 0.65);
+  text-align: center;
+}
+
+.qerunEstimate {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--qerun-text-muted);
+  text-align: center;
+}

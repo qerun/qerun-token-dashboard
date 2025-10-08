@@ -1,198 +1,38 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
-import SwapAbi from '../abi/Swap.json';
+import styles from '../styles/qerunTheme.module.css';
+import { CONTRACT_CONFIG, REGISTRY_IDS, DEFAULT_DECIMALS } from '../config';
 import StateManagerAbi from '../abi/StateManager.json';
-import { CONTRACT_CONFIG, DEFAULT_DECIMALS, REGISTRY_IDS } from '../config';
+import SwapAbi from '../abi/Swap.json';
+import Connect from './Connect';
 
 const ERC20_ABI = [
-    'function balanceOf(address) view returns (uint256)',
-    'function approve(address,uint256) external returns (bool)',
-    'function decimals() view returns (uint8)',
+  "function balanceOf(address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)",
+  "function decimals() view returns (uint8)",
 ];
-const BPS = 10_000n;
 
-type ResolvedAddresses = {
-    swap: string;
-    usd: string;
+interface ResolvedAddresses {
     qer: string;
-};
+    usd: string;
+    swap: string;
+}
+
+const BPS = 10000n;
 
 const Swap: React.FC = () => {
-    const styles: Record<string, React.CSSProperties> = {
-        page: {
-            minHeight: '100vh',
-            margin: 0,
-            padding: '72px 16px 96px',
-            background:
-                'radial-gradient(1200px at 10% 20%, rgba(51, 119, 255, 0.18) 0%, transparent 60%), radial-gradient(900px at 90% 15%, rgba(55, 237, 214, 0.14) 0%, transparent 55%), linear-gradient(160deg, #040a24 0%, #081237 45%, #040720 100%)',
-            boxSizing: 'border-box',
-            color: '#f5f7ff',
-            fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        },
-        layout: {
-            maxWidth: 1024,
-            margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: 48,
-            alignItems: 'center',
-        },
-        hero: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-        },
-        badge: {
-            alignSelf: 'flex-start',
-            padding: '6px 14px',
-            borderRadius: 999,
-            background: 'rgba(82, 146, 255, 0.18)',
-            color: '#6fb1ff',
-            fontWeight: 600,
-            fontSize: 13,
-            letterSpacing: 0.6,
-            textTransform: 'uppercase',
-        },
-        heroTitle: {
-            margin: 0,
-            fontSize: 40,
-            lineHeight: 1.15,
-            fontWeight: 700,
-            color: '#f5f7ff',
-        },
-        heroCopy: {
-            margin: 0,
-            fontSize: 18,
-            lineHeight: 1.6,
-            color: 'rgba(220, 231, 255, 0.82)',
-            maxWidth: 420,
-        },
-        metricsPanel: {
-            marginTop: 12,
-            display: 'grid',
-            gap: 12,
-        },
-        metricCard: {
-            background: 'linear-gradient(140deg, rgba(26, 41, 98, 0.65), rgba(21, 31, 82, 0.45))',
-            border: '1px solid rgba(108, 150, 255, 0.18)',
-            borderRadius: 16,
-            padding: 16,
-        },
-        metricLabel: {
-            fontSize: 13,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase',
-            color: 'rgba(201, 214, 255, 0.7)',
-            marginBottom: 4,
-        },
-        metricValue: {
-            fontSize: 20,
-            fontWeight: 600,
-            color: '#f7f9ff',
-        },
-        card: {
-            position: 'relative',
-            background: 'rgba(8, 14, 44, 0.82)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 24,
-            padding: 32,
-            border: '1px solid rgba(92, 132, 255, 0.25)',
-            boxShadow: '0 30px 80px rgba(12, 24, 73, 0.35)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-        },
-        cardHeader: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-        },
-        cardTitle: {
-            margin: 0,
-            fontSize: 26,
-            fontWeight: 600,
-            color: '#eef3ff',
-        },
-        cardSubtitle: {
-            margin: 0,
-            fontSize: 14,
-            color: 'rgba(201, 214, 255, 0.72)',
-        },
-        warning: {
-            padding: '12px 14px',
-            borderRadius: 14,
-            background: 'rgba(255, 105, 135, 0.16)',
-            border: '1px solid rgba(255, 109, 132, 0.3)',
-            color: '#ff81a2',
-            fontWeight: 600,
-        },
-        selectorGroup: {
-            display: 'grid',
-            gap: 16,
-        },
-        label: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            fontSize: 13,
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            color: 'rgba(185, 204, 255, 0.78)',
-        },
-        select: {
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: 14,
-            border: '1px solid rgba(112, 152, 255, 0.35)',
-            background: 'rgba(18, 28, 69, 0.85)',
-            color: '#f6f8ff',
-            fontSize: 16,
-            appearance: 'none',
-        },
-        input: {
-            width: '100%',
-            padding: '14px 16px',
-            borderRadius: 14,
-            border: '1px solid rgba(112, 152, 255, 0.35)',
-            background: 'rgba(18, 28, 69, 0.85)',
-            color: '#f6f8ff',
-            fontSize: 18,
-        },
-        swapButton: {
-            marginTop: 12,
-            padding: '14px 18px',
-            borderRadius: 16,
-            border: 'none',
-            fontSize: 18,
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #4c74ff 0%, #37d7ff 100%)',
-            color: '#f5f8ff',
-            cursor: 'pointer',
-            boxShadow: '0 15px 40px rgba(76, 116, 255, 0.45)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-        },
-        footerNote: {
-            marginTop: 4,
-            fontSize: 12,
-            color: 'rgba(190, 206, 255, 0.65)',
-            textAlign: 'center',
-        },
-    };
-
     const [addresses, setAddresses] = useState<ResolvedAddresses | null>(null);
-    const [account, setAccount] = useState<string>('');
-    const [usdBalance, setUsdBalance] = useState<string>('0');
-    const [qerBalance, setQerBalance] = useState<string>('0');
-    const [swapUsdBalance, setSwapUsdBalance] = useState<string>('0');
-    const [swapQerBalance, setSwapQerBalance] = useState<string>('0');
-    const [rate, setRate] = useState<string>('');
+    const [usdBalance, setUsdBalance] = useState('0');
+    const [qerBalance, setQerBalance] = useState('0');
+    const [swapUsdBalance, setSwapUsdBalance] = useState('0');
+    const [swapQerBalance, setSwapQerBalance] = useState('0');
+    const [rate, setRate] = useState('Loading...');
+    const [networkWarning, setNetworkWarning] = useState<string | null>(null);
     const [reserveQer, setReserveQer] = useState<bigint>(0n);
     const [reserveUsd, setReserveUsd] = useState<bigint>(0n);
     const [feeBps, setFeeBps] = useState<bigint>(0n);
-    const [usdDecimals, setUsdDecimals] = useState<number>(DEFAULT_DECIMALS.usd);
-    const [qerDecimals, setQerDecimals] = useState<number>(DEFAULT_DECIMALS.qer);
-    const [networkWarning, setNetworkWarning] = useState<string | null>(null);
-
+    const [usdDecimals, setUsdDecimals] = useState(18);
+    const [qerDecimals, setQerDecimals] = useState(18);
     const loadState = useCallback(async () => {
         if (!window.ethereum) return;
         const provider = new ethers.BrowserProvider(window.ethereum);
@@ -204,7 +44,6 @@ const Swap: React.FC = () => {
                 `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_CONFIG.chainId}.`,
             );
             setAddresses(null);
-            setAccount('');
             setUsdBalance('0');
             setQerBalance('0');
             setSwapUsdBalance('0');
@@ -218,7 +57,6 @@ const Swap: React.FC = () => {
         const accounts: string[] = await provider.send('eth_requestAccounts', []);
         if (!accounts || accounts.length === 0) return;
         const activeAccount = accounts[0];
-        setAccount(activeAccount);
 
         let resolved: ResolvedAddresses;
         try {
@@ -414,98 +252,132 @@ const Swap: React.FC = () => {
     };
 
     return (
-        <div style={styles.page}>
-            <div style={styles.layout}>
-                <div style={styles.hero}>
-                    <span style={styles.badge}>Qerun Exchange</span>
-                    <h1 style={styles.heroTitle}>Swap QER with Main Treasury Liquidity</h1>
-                    <p style={styles.heroCopy}>
-                        Execute instant swaps between QER and its USD reserve without leaving your wallet. Qerun’s
-                        on-chain treasury keeps prices transparent and spreads low.
-                    </p>
-                    <div style={styles.metricsPanel}>
-                        <div style={styles.metricCard}>
-                            <div style={styles.metricLabel}>Connected account</div>
-                            <div style={styles.metricValue}>{account || '—'}</div>
+        <div className={styles.qerunPage}>
+            <div className={styles.qerunLayout}>
+                <div className={styles.hero}>
+                    <div className={styles.qerunLogoContainer}>
+                        <img src="/logo.png" alt="Qerun crown logo" width="96" height="96" className={styles.qerunLogo} />
+                        <span className={styles.qerunBadge}>Qerun Ecosystem</span>
+                    </div>
+                    <h1 className={styles.qerunHeroTitle}>Swap QER</h1>
+                    <div className={styles.qerunMetricsPanel}>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Your USD Balance</div>
+                            <div className={styles.qerunMetricValue}>{usdBalance} USD</div>
                         </div>
-                        <div style={styles.metricCard}>
-                            <div style={styles.metricLabel}>Current pool rate</div>
-                            <div style={styles.metricValue}>{rate || 'Loading…'}</div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Your QER Balance</div>
+                            <div className={styles.qerunMetricValue}>{qerBalance} QER</div>
                         </div>
-                        <div style={styles.metricCard}>
-                            <div style={styles.metricLabel}>Treasury balances</div>
-                            <div style={styles.metricValue}>
-                                {swapUsdBalance} USD • {swapQerBalance} QER
-                            </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
+                            <div className={styles.qerunMetricValue}>{swapUsdBalance} USD</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Swap QER Balance</div>
+                            <div className={styles.qerunMetricValue}>{swapQerBalance} QER</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Current Rate</div>
+                            <div className={styles.qerunMetricValue}>{rate}</div>
                         </div>
                     </div>
                 </div>
-
-                <form onSubmit={handleSwap} style={styles.card}>
-                    <div style={styles.cardHeader}>
-                        <h2 style={styles.cardTitle}>Swap tokens</h2>
-                        <p style={styles.cardSubtitle}>Choose the direction, enter an amount, and confirm with your wallet.</p>
+                <form onSubmit={handleSwap} className={styles.qerunCard}>
+                    <div className={styles.cardHeader}>
+                        <h2 className={styles.qerunCardTitle}>Swap tokens</h2>
+                        <p className={styles.qerunCardSubtitle}>Choose the direction, enter an amount, and confirm with your wallet.</p>
                     </div>
-
-                    {networkWarning && <div style={styles.warning}>{networkWarning}</div>}
-
-                    <div style={styles.selectorGroup}>
-                        <label style={styles.label}>
+                    {networkWarning && <div className={styles.warning}>{networkWarning}</div>}
+                    <div className={styles.qerunSelectorGroup}>
+                        <label className={styles.qerunLabel}>
                             From token
                             <select
                                 value={fromToken}
                                 onChange={e => handleFromTokenChange(e.target.value as 'USD' | 'QER')}
-                                style={styles.select}
+                                className={styles.qerunSelect}
                             >
                                 <option value="USD">USD</option>
                                 <option value="QER">QER</option>
                             </select>
                         </label>
-
-                        <label style={styles.label}>
+                        <label className={styles.qerunLabel}>
                             To token
                             <select
                                 value={toToken}
                                 onChange={e => handleToTokenChange(e.target.value as 'USD' | 'QER')}
-                                style={styles.select}
+                                className={styles.qerunSelect}
                             >
                                 <option value="USD">USD</option>
                                 <option value="QER">QER</option>
                             </select>
                         </label>
-
-                        <label style={styles.label}>
-                            Amount
+                        <label className={styles.qerunLabel}>
+                            Amount in {fromToken}
                             <input
                                 type="number"
                                 placeholder="0.00"
                                 value={amount}
                                 onChange={e => setAmount(e.target.value)}
-                                style={styles.input}
+                                className={styles.qerunInput}
                             />
                         </label>
-
-                        <div style={{ display: 'grid', gap: 4, fontSize: 13, color: 'rgba(201, 214, 255, 0.72)' }}>
-                            <div>Your balances: {usdBalance} USD • {qerBalance} QER</div>
-                        </div>
+                        {amount && parseFloat(amount) > 0 && (
+                            <div className={styles.qerunEstimate}>
+                                Estimated: {(() => {
+                                    const numAmount = parseFloat(amount);
+                                    const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                                    const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                                    const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
+                                    return ethers.formatUnits(estimatedBigInt, outputDecimals);
+                                })()} {toToken}
+                                <br />
+                                Min received: {(() => {
+                                    const numAmount = parseFloat(amount);
+                                    const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                                    const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                                    const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
+                                    const minBigInt = estimatedBigInt > 0n ? (estimatedBigInt * 98n) / 100n : 0n;
+                                    return ethers.formatUnits(minBigInt, outputDecimals);
+                                })()} {toToken} (2% slippage)
+                                <br />
+                                Price impact: {(() => {
+                                    const numAmount = parseFloat(amount);
+                                    if (numAmount <= 0) return '0.00%';
+                                    const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                                    const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
+                                    const outputAmount = estimateAmountOut(inputAmount, fromToken);
+                                    
+                                    // Spot rate: for USD->QER, spot = reserveQer / reserveUsd
+                                    // Effective rate = outputAmount / inputAmount
+                                    let spotRate: number;
+                                    let effectiveRate: number;
+                                    
+                                    if (fromToken === 'USD') {
+                                        spotRate = Number(ethers.formatUnits(reserveQer, qerDecimals)) / Number(ethers.formatUnits(reserveUsd, usdDecimals));
+                                        effectiveRate = Number(ethers.formatUnits(outputAmount, qerDecimals)) / numAmount;
+                                    } else {
+                                        spotRate = Number(ethers.formatUnits(reserveUsd, usdDecimals)) / Number(ethers.formatUnits(reserveQer, qerDecimals));
+                                        effectiveRate = Number(ethers.formatUnits(outputAmount, usdDecimals)) / numAmount;
+                                    }
+                                    
+                                    const impact = ((spotRate - effectiveRate) / spotRate) * 100;
+                                    return impact.toFixed(2) + '%';
+                                })()}
+                            </div>
+                        )}
                     </div>
-
                     <button
                         type="submit"
-                        style={styles.swapButton}
-                        onMouseOver={e => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 18px 40px rgba(60, 120, 255, 0.45)';
-                        }}
-                        onMouseOut={e => {
-                            e.currentTarget.style.transform = 'none';
-                            e.currentTarget.style.boxShadow = '0 15px 40px rgba(76, 116, 255, 0.45)';
-                        }}
+                        className={styles.qerunSwapButton}
                     >
                         Swap now
                     </button>
-                    <div style={styles.footerNote}>Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps</div>
+                    <div className={styles.qerunFooterNote}>Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps</div>
                 </form>
+                <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
+                    <Connect />
+                </div>
             </div>
         </div>
     );
