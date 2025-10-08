@@ -166,7 +166,11 @@ const Swap: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadState();
+        void loadState();
+        const intervalId = setInterval(() => {
+            void loadState();
+        }, 1000);
+        return () => clearInterval(intervalId);
     }, [loadState]);
 
     const estimateAmountOut = useCallback(

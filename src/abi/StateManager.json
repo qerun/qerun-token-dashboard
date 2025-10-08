@@ -225,7 +225,7 @@
         "type": "address"
       }
     ],
-    "name": "TokenGovernanceUpdated",
+    "name": "GovernanceModuleUpdated",
     "type": "event"
   },
   {
@@ -251,7 +251,7 @@
         "type": "uint256"
       }
     ],
-    "name": "applyTokenGovernance",
+    "name": "applyGovernanceModule",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -585,7 +585,7 @@
         "type": "address[]"
       }
     ],
-    "name": "setTokenGovernanceModules",
+    "name": "setGovernanceModule",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -615,7 +615,7 @@
   },
   {
     "inputs": [],
-    "name": "tokenGovernanceModules",
+    "name": "governanceModules",
     "outputs": [
       {
         "internalType": "address[]",
