@@ -17,7 +17,7 @@ export const CONTRACT_CONFIG = {
   chainId: import.meta.env.VITE_CHAIN_ID ?? '31337',
 } as const;
 
-export const QERUN_IDS = {
+export const REGISTRY_IDS = {
   MAIN_CONTRACT: makeId('MAIN_CONTRACT'),
   TREASURY: makeId('TREASURY'),
   PRIMARY_QUOTE: makeId('PRIMARY_QUOTE'),

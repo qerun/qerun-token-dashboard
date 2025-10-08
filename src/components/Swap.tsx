@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import QerunSwapAbi from '../abi/QerunSwap.json';
+import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
-import { CONTRACT_CONFIG, DEFAULT_DECIMALS, QERUN_IDS } from '../config';
+import { CONTRACT_CONFIG, DEFAULT_DECIMALS, REGISTRY_IDS } from '../config';
 
 const ERC20_ABI = [
     'function balanceOf(address) view returns (uint256)',
@@ -87,9 +87,9 @@ const Swap: React.FC = () => {
             };
 
             const [qerFromState, usdFromState, swapFromState] = await Promise.all([
-                requireAddress(QERUN_IDS.MAIN_CONTRACT),
-                requireAddress(QERUN_IDS.PRIMARY_QUOTE),
-                requireAddress(QERUN_IDS.SWAP_CONTRACT),
+                requireAddress(REGISTRY_IDS.MAIN_CONTRACT),
+                requireAddress(REGISTRY_IDS.PRIMARY_QUOTE),
+                requireAddress(REGISTRY_IDS.SWAP_CONTRACT),
             ]);
 
             if (
@@ -139,7 +139,7 @@ const Swap: React.FC = () => {
         setSwapUsdBalance(ethers.formatUnits(swapUsd, usdDec));
         setSwapQerBalance(ethers.formatUnits(swapQer, qerDec));
 
-        const swap = new ethers.Contract(swapAddress, QerunSwapAbi, provider);
+        const swap = new ethers.Contract(swapAddress, SwapAbi, provider);
         try {
             const [reserveQerRaw, reserveUsdRaw]: [bigint, bigint] = await swap.getReserves(usdTokenAddress);
             const currentFeeBps: bigint = await swap.feeBps();
@@ -220,7 +220,7 @@ const Swap: React.FC = () => {
             const { swap: swapAddress, usd: usdTokenAddress, qer: qerTokenAddress } = addresses;
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
-            const contract = new ethers.Contract(swapAddress, QerunSwapAbi, signer);
+            const contract = new ethers.Contract(swapAddress, SwapAbi, signer);
             const fromDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
             const amountIn = ethers.parseUnits(amount, fromDecimals);
             const expectedOut = estimateAmountOut(amountIn, fromToken);

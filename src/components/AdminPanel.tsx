@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
-import QerunSwapAbi from '../abi/QerunSwap.json';
+import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
-import { CONTRACT_CONFIG, QERUN_IDS } from '../config';
+import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -66,10 +66,10 @@ const AdminPanel: React.FC = () => {
         }
       };
 
-      const swapAddr = await requireAddress(QERUN_IDS.SWAP_CONTRACT, 'StateManager missing swap contract address');
-      const quoteAddr = await requireAddress(QERUN_IDS.PRIMARY_QUOTE, 'StateManager missing quote token address');
-      const qerAddr = await requireAddress(QERUN_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
-      const treasuryAddr = await requireAddress(QERUN_IDS.TREASURY, 'StateManager missing treasury address');
+      const swapAddr = await requireAddress(REGISTRY_IDS.SWAP_CONTRACT, 'StateManager missing swap contract address');
+      const quoteAddr = await requireAddress(REGISTRY_IDS.PRIMARY_QUOTE, 'StateManager missing quote token address');
+      const qerAddr = await requireAddress(REGISTRY_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
+      const treasuryAddr = await requireAddress(REGISTRY_IDS.TREASURY, 'StateManager missing treasury address');
 
       const entries: Array<{ id: string; label: string; value: string }> = [];
       const appendEntry = (label: string, value: string) => {
@@ -79,7 +79,7 @@ const AdminPanel: React.FC = () => {
       appendEntry('Treasury', treasuryAddr);
       appendEntry('Primary Quote', quoteAddr);
       appendEntry('Swap', swapAddr);
-      appendEntry('Swap Fee (bps)', (await stateManager.getUint(QERUN_IDS.SWAP_FEE_BPS)).toString());
+      appendEntry('Swap Fee (bps)', (await stateManager.getUint(REGISTRY_IDS.SWAP_FEE_BPS)).toString());
       setConfigEntries(entries);
 
       setSwapAddress(swapAddr);
@@ -95,7 +95,7 @@ const AdminPanel: React.FC = () => {
         setTreasuryQerBalance(null);
       }
 
-      const contract = new ethers.Contract(swapAddr, QerunSwapAbi, provider);
+      const contract = new ethers.Contract(swapAddr, SwapAbi, provider);
       const pairs: string[] = await contract.allPairs();
       const normalised = pairs.map(addr => ethers.getAddress(addr));
       setCurrentPairs(normalised);
@@ -168,7 +168,7 @@ const AdminPanel: React.FC = () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(swapAddress, QerunSwapAbi, signer);
+      const contract = new ethers.Contract(swapAddress, SwapAbi, signer);
       const tx = await contract.updatePairs(draftPairs);
       await tx.wait();
       setStatus('Pairs updated successfully.');
