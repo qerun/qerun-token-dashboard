@@ -4,6 +4,11 @@ import QerunSwapAbi from '../abi/QerunSwap.json';
 import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, QERUN_IDS } from '../config';
 
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+];
+
 const AdminPanel: React.FC = () => {
   const [swapAddress, setSwapAddress] = useState<string | null>(null);
   const [defaultQuote, setDefaultQuote] = useState<string | null>(null);
