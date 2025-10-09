@@ -22,8 +22,33 @@ const AdminPanel: React.FC = () => {
   const [treasuryQerBalance, setTreasuryQerBalance] = useState<string | null>(null);
   const [qerTokenAddress, setQerTokenAddress] = useState<string | null>(null);
   const [configEntries, setConfigEntries] = useState<Array<{ id: string; label: string; value: string }>>([]);
+  const [hasAdminAccess, setHasAdminAccess] = useState<boolean>(false);
 
   const hasWallet = useMemo(() => Boolean(window.ethereum), []);
+
+  const checkAdminAccess = useCallback(async () => {
+    if (!window.ethereum) {
+      setHasAdminAccess(false);
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
+
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+
+      // Check if user is the owner/admin of the StateManager contract
+      const owner = await stateManager.owner();
+      const isOwner = owner.toLowerCase() === userAddress.toLowerCase();
+
+      setHasAdminAccess(isOwner);
+    } catch (err) {
+      console.error('Failed to check admin access:', err);
+      setHasAdminAccess(false);
+    }
+  }, []);
 
   const normaliseAddress = (value: string) => {
     try {
@@ -118,6 +143,10 @@ const AdminPanel: React.FC = () => {
     loadPairs();
   }, [loadPairs]);
 
+  useEffect(() => {
+    checkAdminAccess();
+  }, [checkAdminAccess]);
+
   const handleAdd = () => {
     const normalised = normaliseAddress(inputAddress);
     if (!normalised) {
@@ -181,6 +210,10 @@ const AdminPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!hasAdminAccess) {
+    return null; // Don't render anything if user doesn't have admin access
+  }
 
   return (
     <section className={`${styles.qerunCard} ${styles.qerunNetworkCardSpacing}`}>
