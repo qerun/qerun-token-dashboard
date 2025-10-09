@@ -9,9 +9,9 @@ import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
 
 const ERC20_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function approve(address,uint256) returns (bool)",
-  "function decimals() view returns (uint8)",
+    "function balanceOf(address) view returns (uint256)",
+    "function approve(address,uint256) returns (bool)",
+    "function decimals() view returns (uint8)",
 ];
 
 interface ResolvedAddresses {
@@ -280,69 +280,12 @@ const Swap: React.FC = () => {
 
     return (
         <div className={styles.qerunPage}>
+            <div className={styles.qerunLogoContainer}>
+                <img src="/logo.png" alt="Qerun crown logo" width="96" height="96" className={styles.qerunLogo} />
+                <span className={styles.qerunBadge}>Qerun Ecosystem</span>
+            </div>
+
             <div className={styles.qerunLayout}>
-                <div className={styles.hero}>
-                    <div className={styles.qerunLogoContainer}>
-                        <img src="/logo.png" alt="Qerun crown logo" width="96" height="96" className={styles.qerunLogo} />
-                        <span className={styles.qerunBadge}>Qerun Ecosystem</span>
-                    </div>
-                    <h1 className={styles.qerunHeroTitle}>Swap QER</h1>
-                    <div className={styles.qerunMetricsPanel}>
-                        <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Your USD Balance</div>
-                            <div className={styles.qerunMetricValue}>{usdBalance} USD</div>
-                            <div className={styles.qerunMetricSubValue}>Total Supply: {usdTotalSupply} USDQ</div>
-                        </div>
-                        <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Your QER Balance</div>
-                            <div className={styles.qerunMetricValue}>{qerBalance} QER</div>
-                            <div className={styles.qerunMetricSubValue}>Total Supply: {qerTotalSupply} QER</div>
-                        </div>
-                        <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
-                            <div className={styles.qerunMetricValue}>{swapUsdBalance} USD</div>
-                        </div>
-                        <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Swap QER Balance</div>
-                            <div className={styles.qerunMetricValue}>{swapQerBalance} QER</div>
-                        </div>
-                        <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Current Rate</div>
-                            <div className={styles.qerunMetricValue}>{rate}</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Network and Token Management */}
-                <div className={styles.qerunCard} style={{ marginBottom: '20px' }}>
-                    <div className={styles.cardHeader}>
-                        <h3 className={styles.qerunCardTitle}>Network & Tokens</h3>
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={handleSwitchNetwork}
-                            className={styles.qerunSwapButton}
-                            style={{ backgroundColor: '#4F46E5', flex: '1', minWidth: '150px' }}
-                        >
-                            Switch to Sepolia
-                        </button>
-                        <button
-                            onClick={handleAddQER}
-                            className={styles.qerunSwapButton}
-                            style={{ backgroundColor: '#059669', flex: '1', minWidth: '120px' }}
-                        >
-                            Add QER Token
-                        </button>
-                        <button
-                            onClick={handleAddUSDQ}
-                            className={styles.qerunSwapButton}
-                            style={{ backgroundColor: '#DC2626', flex: '1', minWidth: '120px' }}
-                        >
-                            Add USDQ Token
-                        </button>
-                    </div>
-                </div>
-
                 <form onSubmit={handleSwap} className={styles.qerunCard}>
                     <div className={styles.cardHeader}>
                         <h2 className={styles.qerunCardTitle}>Swap tokens</h2>
@@ -381,6 +324,9 @@ const Swap: React.FC = () => {
                                 onChange={e => setAmount(e.target.value)}
                                 className={styles.qerunInput}
                             />
+                            <div className={styles.qerunBalanceDisplay}>
+                                Balance: {fromToken === 'USD' ? `${usdBalance} USD` : `${qerBalance} QER`}
+                            </div>
                         </label>
                         {amount && parseFloat(amount) > 0 && (
                             <div className={styles.qerunEstimate}>
@@ -407,12 +353,12 @@ const Swap: React.FC = () => {
                                     const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
                                     const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
                                     const outputAmount = estimateAmountOut(inputAmount, fromToken);
-                                    
+
                                     // Spot rate: for USD->QER, spot = reserveQer / reserveUsd
                                     // Effective rate = outputAmount / inputAmount
                                     let spotRate: number;
                                     let effectiveRate: number;
-                                    
+
                                     if (fromToken === 'USD') {
                                         spotRate = Number(ethers.formatUnits(reserveQer, qerDecimals)) / Number(ethers.formatUnits(reserveUsd, usdDecimals));
                                         effectiveRate = Number(ethers.formatUnits(outputAmount, qerDecimals)) / numAmount;
@@ -420,7 +366,7 @@ const Swap: React.FC = () => {
                                         spotRate = Number(ethers.formatUnits(reserveUsd, usdDecimals)) / Number(ethers.formatUnits(reserveQer, qerDecimals));
                                         effectiveRate = Number(ethers.formatUnits(outputAmount, usdDecimals)) / numAmount;
                                     }
-                                    
+
                                     const impact = ((spotRate - effectiveRate) / spotRate) * 100;
                                     return impact.toFixed(2) + '%';
                                 })()}
@@ -435,7 +381,51 @@ const Swap: React.FC = () => {
                     </button>
                     <div className={styles.qerunFooterNote}>Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps</div>
                 </form>
-                <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
+
+                <div className={styles.hero}>
+                    <div className={styles.qerunMetricsPanel}>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
+                            <div className={styles.qerunMetricValue}>{swapUsdBalance} USD</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Swap QER Balance</div>
+                            <div className={styles.qerunMetricValue}>{swapQerBalance} QER</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Current Rate</div>
+                            <div className={styles.qerunMetricValue}>{rate}</div>
+                        </div>
+                    </div>
+                </div>
+                {/* Network and Token Management */}
+                <div className={`${styles.qerunCard} ${styles.qerunNetworkCardSpacing}`}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.qerunCardTitle}>Network & Tokens</h3>
+                    </div>
+                    <div className={styles.qerunButtonContainer}>
+                        <button
+                            onClick={handleSwitchNetwork}
+                            className={styles.qerunSwapButton}
+                        >
+                            Switch to Sepolia
+                        </button>
+                        <button
+                            onClick={handleAddQER}
+                            className={styles.qerunSwapButton}
+                        >
+                            Add QER Token
+                        </button>
+                        <button
+                            onClick={handleAddUSDQ}
+                            className={styles.qerunSwapButton}
+                        >
+                            Add USDQ Token
+                        </button>
+                    </div>
+                </div>
+
+                <div className={styles.qerunConnectFixed}>
                     <Connect />
                 </div>
             </div>

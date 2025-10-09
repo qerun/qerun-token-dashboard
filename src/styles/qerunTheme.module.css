@@ -234,3 +234,55 @@
   color: var(--qerun-text-muted);
   text-align: center;
 }
+
+/* Network Card Spacing */
+.qerunNetworkCardSpacing {
+  margin-bottom: 20px;
+}
+
+/* Button Container Layout */
+.qerunButtonContainer {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Fixed Connect Component */
+.qerunConnectFixed {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Connect Button */
+.qerunConnectButton {
+  padding: 8px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: none;
+  background: #43a047;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.qerunConnectButton:hover {
+  background: #388e3c;
+}
+
+.qerunConnectButton.connected {
+  background: #f44336;
+}
+
+.qerunConnectButton.connected:hover {
+  background: #d32f2f;
+}
+
+/* Balance Display */
+.qerunBalanceDisplay {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--qerun-text-muted);
+  text-align: right;
+}

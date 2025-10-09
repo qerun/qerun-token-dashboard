@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import styles from '../styles/qerunTheme.module.css';
 
 const Connect: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -67,15 +68,7 @@ const Connect: React.FC = () => {
   return (
     <button
       onClick={isConnected ? handleDisconnect : handleConnect}
-      style={{
-        padding: '8px 16px',
-        fontSize: '16px',
-        borderRadius: '4px',
-        border: 'none',
-        background: isConnected ? '#f44336' : '#43a047',
-        color: '#fff',
-        cursor: 'pointer',
-      }}
+      className={`${styles.qerunConnectButton} ${isConnected ? styles.connected : ''}`}
     >
       {isConnected ? `Disconnect (${account.slice(0, 6)}...${account.slice(-4)})` : 'Connect Wallet'}
     </button>
