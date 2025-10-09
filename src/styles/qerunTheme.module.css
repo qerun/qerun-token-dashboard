@@ -10,30 +10,48 @@
   --qerun-border: #f7d976;
   --qerun-radius-xl: 1rem;
   --qerun-radius-xxl: 1.5rem;
-  --qerun-radi.qerunCard .qerunStatus {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: var(--qerun-radius-xl);
-  font-weight: 500;
-}
-
-.qerunCard .qerunStatus.qerunStatusError {
-  background: rgba(244, 67, 54, 0.1);
-  color: var(--qerun-accent);
-  border: 1px solid rgba(244, 67, 54, 0.3);
-}
-
-.qerunCard .qerunStatus.qerunStatusSuccess {
-  background: rgba(33, 150, 243, 0.1);
-  color: #1976d2;
-  border: 1px solid rgba(33, 150, 243, 0.3);
-} --qerun-spacing-xs: 0.25rem;
+  --qerun-radius-sm: 0.5rem;
+  --qerun-radius-round: 999px;
+  --qerun-spacing-xs: 0.25rem;
   --qerun-spacing-sm: 0.5rem;
   --qerun-spacing-md: 1rem;
   --qerun-spacing-lg: 2rem;
   --qerun-font-family: 'Inter', 'Segoe UI', sans-serif;
   --qerun-font-weight-medium: 500;
   --qerun-font-weight-semibold: 600;
+
+  /* Color variations and transparency */
+  --qerun-gold-alpha-15: rgba(247, 217, 118, 0.15);
+  --qerun-gold-alpha-18: rgba(247, 217, 118, 0.18);
+  --qerun-gold-alpha-25: rgba(247, 217, 118, 0.25);
+  --qerun-gold-alpha-35: rgba(247, 217, 118, 0.35);
+  --qerun-gold-alpha-40: rgba(247, 217, 118, 0.4);
+  --qerun-gold-alpha-45: rgba(247, 217, 118, 0.45);
+
+  --qerun-accent-alpha-40: rgba(139, 0, 0, 0.4);
+
+  --qerun-text-alpha-65: rgba(255, 225, 185, 0.65);
+  --qerun-text-alpha-78: rgba(255, 225, 185, 0.78);
+  --qerun-text-alpha-60: rgba(255, 225, 185, 0.6);
+
+  --qerun-card-secondary: rgba(255, 255, 255, 0.1);
+
+  /* Status colors */
+  --qerun-error: #ff876c;
+  --qerun-error-alpha-10: rgba(244, 67, 54, 0.1);
+  --qerun-error-alpha-30: rgba(244, 67, 54, 0.3);
+  --qerun-error-dark: #d3602f;
+
+  --qerun-success: #89a043;
+  --qerun-success-hover: #778e38;
+  --qerun-success-alpha-10: rgba(184, 243, 33, 0.1);
+  --qerun-success-alpha-30: rgba(184, 243, 33, 0.3);
+  --qerun-success-text: #1976d2;
+
+  /* UI colors */
+  --qerun-white: #fff;
+  --qerun-text-light: #fffcf7;
+  --qerun-badge-text: #f9e7a9;
 }
 
 .qerunPage {
@@ -44,8 +62,8 @@
   height: 100vh;
   margin: 0;
   background-image:
-    radial-gradient(circle at 20% -10%, rgba(247, 217, 118, 0.45), transparent 55%),
-    radial-gradient(circle at 80% 0%, rgba(139, 0, 0, 0.4), transparent 60%);
+    radial-gradient(circle at 20% -10%, var(--qerun-gold-alpha-45), transparent 55%),
+    radial-gradient(circle at 80% 0%, var(--qerun-accent-alpha-40), transparent 60%);
   background-color: var(--qerun-bg);
   box-sizing: border-box;
   color: var(--qerun-text);
@@ -76,8 +94,8 @@
   backdrop-filter: blur(10px);
   border-radius: var(--qerun-radius-xl);
   padding: 24px 12px;
-  border: 1px solid rgba(255, 193, 92, 0.25);
-  box-shadow: 0 30px 80px rgba(73, 51, 12, 0.35);
+  border: 1px solid var(--qerun-gold-alpha-25);
+  box-shadow: 0 30px 80px var(--qerun-shadow-color);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -105,14 +123,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(247, 217, 118, 0.4);
-  background: rgba(247, 217, 118, 0.15);
+  border-radius: var(--qerun-radius-round);
+  border: 1px solid var(--qerun-gold-alpha-40);
+  background: var(--qerun-gold-alpha-15);
   padding: 4px 16px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2em;
-  color: #f9e7a9;
+  color: var(--qerun-badge-text);
   text-transform: uppercase;
 }
 
@@ -123,7 +141,7 @@
 }
 
 .qerunLogo {
-  filter: drop-shadow(0 8px 20px rgba(247, 217, 118, 0.35));
+  filter: drop-shadow(0 8px 20px var(--qerun-gold-alpha-35));
 }
 
 .qerunHeroTitle {
@@ -162,7 +180,7 @@
 
 .qerunMetricCard {
   background: var(--qerun-card);
-  border: 1px solid rgba(255, 208, 108, 0.18);
+  border: 1px solid var(--qerun-gold-alpha-18);
   border-radius: 16px;
   padding: 16px;
 }
@@ -178,12 +196,12 @@
 .qerunMetricValue {
   font-size: 20px;
   font-weight: 600;
-  color: #fffcf7;
+  color: var(--qerun-text-light);
 }
 
 .qerunMetricSubValue {
   font-size: 11px;
-  color: rgba(255, 225, 185, 0.6);
+  color: var(--qerun-text-alpha-60);
   margin-top: 2px;
   font-weight: 400;
 }
@@ -200,7 +218,7 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: rgba(255, 225, 185, 0.78);
+  color: var(--qerun-text-alpha-78);
 }
 
 .qerunSelect {
@@ -251,7 +269,7 @@
 .qerunFooterNote {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(255, 233, 190, 0.65);
+  color: var(--qerun-text-alpha-65);
   text-align: center;
 }
 
@@ -288,22 +306,22 @@
   font-size: 16px;
   border-radius: 4px;
   border: none;
-  background: #43a047;
-  color: #fff;
+  background: var(--qerun-success);
+  color: var(--qerun-white);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .qerunConnectButton:hover {
-  background: #388e3c;
+  background: var(--qerun-success-hover);
 }
 
 .qerunConnectButton.connected {
-  background: #f44336;
+  background: var(--qerun-error);
 }
 
 .qerunConnectButton.connected:hover {
-  background: #d32f2f;
+  background: var(--qerun-error-dark);
 }
 
 /* Admin Panel Styles - Tag-based selectors within .qerunCard */
@@ -338,37 +356,42 @@
   cursor: not-allowed;
 }
 
-.qerunCard button.qerunButtonSmall {
+.qerunCard button.qerunButton__small {
   padding: 6px 12px;
   font-size: 12px;
 }
 
-.qerunCard button.qerunButtonLarge {
+.qerunCard button.qerunButton__large {
   padding: 10px 18px;
   font-size: 15px;
 }
 
-.qerunCard .qerunRemoveButton:hover {
-  background: #d32f2f;
+.qerunCard .qerunButton__danger {
+  background: var(--qerun-error);
+  color: var(--qerun-white);
 }
 
-.qerunCard .qerunStatus {
+.qerunCard .qerunButton__danger:hover {
+  background: var(--qerun-error-dark);
+}
+
+.qerunAlert {
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: var(--qerun-radius-xl);
   font-weight: 500;
 }
 
-.qerunCard .qerunStatus.qerunStatusError {
-  background: rgba(244, 67, 54, 0.1);
+.qerunAlert.qerunAlert__error {
+  background: var(--qerun-error-alpha-10);
   color: var(--qerun-accent);
-  border: 1px solid rgba(244, 67, 54, 0.3);
+  border: 1px solid var(--qerun-error-alpha-30);
 }
 
-.qerunCard .qerunStatus.qerunStatusSuccess {
-  background: rgba(33, 150, 243, 0.1);
-  color: #1976d2;
-  border: 1px solid rgba(33, 150, 243, 0.3);
+.qerunAlert.qerunAlert__success {
+  background: var(--qerun-success-alpha-10);
+  color: var(--qerun-success-text);
+  border: 1px solid var(--qerun-success-alpha-30);
 }
 
 /* Balance Display */

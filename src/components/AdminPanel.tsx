@@ -213,13 +213,13 @@ const AdminPanel: React.FC = () => {
         </button>
       </div>
       <div className={`${styles.qerunButtonContainer} ${styles.qerunMarginBottom16}`}>
-                <button type="button" onClick={handleIncludeDefault} className={styles.qerunButtonSmall} disabled={!defaultQuote}>
+                <button type="button" onClick={handleIncludeDefault} className={styles.qerunButton__small} disabled={!defaultQuote}>
           Include USD token
         </button>
-        <button type="button" onClick={handleReset} className={styles.qerunButtonSmall}>
+        <button type="button" onClick={handleReset} className={styles.qerunButton__small}>
           Reset
         </button>
-        <button type="button" onClick={loadPairs} className={styles.qerunButtonSmall}>
+        <button type="button" onClick={loadPairs} className={styles.qerunButton__small}>
           Refresh
         </button>
       </div>
@@ -235,7 +235,7 @@ const AdminPanel: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleRemove(address)}
-                  className={styles.qerunRemoveButton}
+                  className={styles.qerunButton__danger}
                 >
                   Remove
                 </button>
@@ -248,12 +248,12 @@ const AdminPanel: React.FC = () => {
         type="button"
         onClick={handleSubmit}
         disabled={loading}
-        className={styles.qerunButtonLarge}
+        className={styles.qerunButton__large}
       >
         {loading ? 'Submitting…' : 'Submit updatePairs'}
       </button>
       {status && (
-        <p className={`${styles.qerunStatus} ${status.includes('failed') ? styles.qerunStatusError : styles.qerunStatusSuccess}`}>
+        <p className={`${styles.qerunAlert} ${status.includes('failed') ? styles.qerunAlert__error : styles.qerunAlert__success}`}>
           {status}
         </p>
       )}
