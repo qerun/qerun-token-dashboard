@@ -310,6 +310,7 @@
   color: var(--qerun-white);
   cursor: pointer;
   transition: background-color 0.2s ease;
+  box-shadow: 0 8px 24px 0 #f7d97699;
 }
 
 .qerunConnectButton:hover {
@@ -344,6 +345,7 @@
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
+  box-shadow: 0 8px 24px 0 #f7d97699;
 }
 
 .qerunCard button:hover {
