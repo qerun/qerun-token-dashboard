@@ -154,6 +154,13 @@
   color: #fffcf7;
 }
 
+.qerunMetricSubValue {
+  font-size: 11px;
+  color: rgba(255, 225, 185, 0.6);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
 .qerunSelectorGroup {
   display: grid;
   gap: 16px;

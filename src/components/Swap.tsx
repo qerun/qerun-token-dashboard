@@ -5,6 +5,8 @@ import { CONTRACT_CONFIG, REGISTRY_IDS, DEFAULT_DECIMALS } from '../config';
 import StateManagerAbi from '../abi/StateManager.json';
 import SwapAbi from '../abi/Swap.json';
 import Connect from './Connect';
+import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
+import { TOKENS } from '../config/tokens';
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -26,6 +28,8 @@ const Swap: React.FC = () => {
     const [qerBalance, setQerBalance] = useState('0');
     const [swapUsdBalance, setSwapUsdBalance] = useState('0');
     const [swapQerBalance, setSwapQerBalance] = useState('0');
+    const [usdTotalSupply, setUsdTotalSupply] = useState('0');
+    const [qerTotalSupply, setQerTotalSupply] = useState('0');
     const [rate, setRate] = useState('Loading...');
     const [networkWarning, setNetworkWarning] = useState<string | null>(null);
     const [reserveQer, setReserveQer] = useState<bigint>(0n);
@@ -119,11 +123,13 @@ const Swap: React.FC = () => {
         const usdToken = new ethers.Contract(usdTokenAddress, ERC20_ABI, provider);
         const qerToken = new ethers.Contract(qerTokenAddress, ERC20_ABI, provider);
 
-        const [usd, qer, swapUsd, swapQer] = await Promise.all([
+        const [usd, qer, swapUsd, swapQer, usdSupply, qerSupply] = await Promise.all([
             usdToken.balanceOf(activeAccount),
             qerToken.balanceOf(activeAccount),
             usdToken.balanceOf(swapAddress),
             qerToken.balanceOf(swapAddress),
+            usdToken.totalSupply(),
+            qerToken.totalSupply(),
         ]);
         const [usdDecRaw, qerDecRaw] = await Promise.all([
             usdToken.decimals().catch(() => DEFAULT_DECIMALS.usd),
@@ -137,6 +143,8 @@ const Swap: React.FC = () => {
         setQerBalance(ethers.formatUnits(qer, qerDec));
         setSwapUsdBalance(ethers.formatUnits(swapUsd, usdDec));
         setSwapQerBalance(ethers.formatUnits(swapQer, qerDec));
+        setUsdTotalSupply(ethers.formatUnits(usdSupply, usdDec));
+        setQerTotalSupply(ethers.formatUnits(qerSupply, qerDec));
 
         const swap = new ethers.Contract(swapAddress, SwapAbi, provider);
         try {
@@ -202,10 +210,29 @@ const Swap: React.FC = () => {
         setToToken(value);
         setFromToken(value === 'USD' ? 'QER' : 'USD');
     };
+    const handleAddQER = async () => {
+        const success = await addTokenToWallet(TOKENS.QER);
+        if (success) {
+            alert('QER token added to wallet!');
+        }
+    };
+
+    const handleAddUSDQ = async () => {
+        const success = await addTokenToWallet(TOKENS.USDQ);
+        if (success) {
+            alert('USDQ token added to wallet!');
+        }
+    };
+
+    const handleSwitchNetwork = async () => {
+        await switchToSepolia();
+        // Reload state after network switch
+        setTimeout(() => loadState(), 1000);
+    };
+
     const [amount, setAmount] = useState('');
 
-    const handleSwap = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSwap = async (_e: React.FormEvent) => {
         if (!window.ethereum) {
             alert('No wallet found');
             return;
@@ -264,10 +291,12 @@ const Swap: React.FC = () => {
                         <div className={styles.qerunMetricCard}>
                             <div className={styles.qerunMetricLabel}>Your USD Balance</div>
                             <div className={styles.qerunMetricValue}>{usdBalance} USD</div>
+                            <div className={styles.qerunMetricSubValue}>Total Supply: {usdTotalSupply} USDQ</div>
                         </div>
                         <div className={styles.qerunMetricCard}>
                             <div className={styles.qerunMetricLabel}>Your QER Balance</div>
                             <div className={styles.qerunMetricValue}>{qerBalance} QER</div>
+                            <div className={styles.qerunMetricSubValue}>Total Supply: {qerTotalSupply} QER</div>
                         </div>
                         <div className={styles.qerunMetricCard}>
                             <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
@@ -283,6 +312,37 @@ const Swap: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Network and Token Management */}
+                <div className={styles.qerunCard} style={{ marginBottom: '20px' }}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.qerunCardTitle}>Network & Tokens</h3>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleSwitchNetwork}
+                            className={styles.qerunSwapButton}
+                            style={{ backgroundColor: '#4F46E5', flex: '1', minWidth: '150px' }}
+                        >
+                            Switch to Sepolia
+                        </button>
+                        <button
+                            onClick={handleAddQER}
+                            className={styles.qerunSwapButton}
+                            style={{ backgroundColor: '#059669', flex: '1', minWidth: '120px' }}
+                        >
+                            Add QER Token
+                        </button>
+                        <button
+                            onClick={handleAddUSDQ}
+                            className={styles.qerunSwapButton}
+                            style={{ backgroundColor: '#DC2626', flex: '1', minWidth: '120px' }}
+                        >
+                            Add USDQ Token
+                        </button>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSwap} className={styles.qerunCard}>
                     <div className={styles.cardHeader}>
                         <h2 className={styles.qerunCardTitle}>Swap tokens</h2>
