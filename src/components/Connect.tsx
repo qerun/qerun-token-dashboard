@@ -213,22 +213,9 @@ const Connect: React.FC = () => {
   };
 
   const handleConnect = () => {
-    if (availableWallets.length === 1) {
-      // If only one wallet available, connect directly
-      handleWalletSelect(availableWallets[0]);
-    } else if (availableWallets.length > 1) {
-      // Show wallet selection modal
-      setShowWalletModal(true);
-    } else {
-      // No browser wallets found
-      if (isMobile && walletConnectModal) {
-        // On mobile, try WalletConnect first
-        handleWalletConnect();
-      } else {
-        // Show our custom modal with wallet app options
-        setShowWalletModal(true);
-      }
-    }
+    // Always show wallet selection modal for better UX
+    // Users should see available options even if there's only one
+    setShowWalletModal(true);
   };
 
   const handleDisconnect = () => {
