@@ -3,15 +3,31 @@
   --qerun-card: oklab(16.5764% .0262622 .0170209 / .8);
   --qerun-gold: #f7d976;
   --qerun-accent: #8b0000;
-  --qerun-text: #fffcf5;
+  --qerun-text: #fff1d0;
   --qerun-text-muted: #ffefc9;
   --qerun-button-bg: #f7d976;
   --qerun-button-text: #2d0e0e;
   --qerun-border: #f7d976;
   --qerun-radius-xl: 1rem;
   --qerun-radius-xxl: 1.5rem;
-  --qerun-radius-round: 999px;
-  --qerun-spacing-xs: 0.25rem;
+  --qerun-radi.qerunCard .qerunStatus {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--qerun-radius-xl);
+  font-weight: 500;
+}
+
+.qerunCard .qerunStatus.qerunStatusError {
+  background: rgba(244, 67, 54, 0.1);
+  color: var(--qerun-accent);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.qerunCard .qerunStatus.qerunStatusSuccess {
+  background: rgba(33, 150, 243, 0.1);
+  color: #1976d2;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+} --qerun-spacing-xs: 0.25rem;
   --qerun-spacing-sm: 0.5rem;
   --qerun-spacing-md: 1rem;
   --qerun-spacing-lg: 2rem;
@@ -75,6 +91,16 @@
   }
 }
 
+/* Text elements within cards */
+.qerunCard,
+.qerunCard p,
+.qerunCard strong,
+.qerunCard b,
+.qerunCard span,
+.qerunCard div {
+  color: var(--qerun-text);
+}
+
 .qerunBadge {
   display: inline-flex;
   align-items: center;
@@ -131,6 +157,7 @@
   background: var(--qerun-card);
   border-radius: var(--qerun-radius-xl);
   padding: 16px;
+  color: var(--qerun-text);
 }
 
 .qerunMetricCard {
@@ -279,10 +306,127 @@
   background: #d32f2f;
 }
 
+/* Admin Panel Styles - Tag-based selectors within .qerunCard */
+.qerunCard input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: var(--qerun-radius-xl);
+  border: 1px solid var(--qerun-border);
+  background: var(--qerun-card);
+  color: var(--qerun-text);
+}
+
+.qerunCard button {
+  padding: 8px 12px;
+  border-radius: var(--qerun-radius-xl);
+  border: 1px solid var(--qerun-border);
+  background: var(--qerun-button-bg);
+  color: var(--qerun-button-text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.qerunCard button:hover {
+  background: linear-gradient(135deg, #f7d976 0%, #f4c842 100%);
+  transform: translateY(-1px);
+}
+
+.qerunCard button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.qerunCard button.qerunButtonSmall {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.qerunCard button.qerunButtonLarge {
+  padding: 10px 18px;
+  font-size: 15px;
+}
+
+.qerunCard .qerunRemoveButton:hover {
+  background: #d32f2f;
+}
+
+.qerunCard .qerunStatus {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--qerun-radius-xl);
+  font-weight: 500;
+}
+
+.qerunCard .qerunStatus.qerunStatusError {
+  background: rgba(244, 67, 54, 0.1);
+  color: var(--qerun-accent);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.qerunCard .qerunStatus.qerunStatusSuccess {
+  background: rgba(33, 150, 243, 0.1);
+  color: #1976d2;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
 /* Balance Display */
 .qerunBalanceDisplay {
   margin-top: 4px;
   font-size: 12px;
   color: var(--qerun-text-muted);
   text-align: right;
+}
+
+/* Admin List and Code Styling */
+.qerunCard ul {
+  padding-left: 18px;
+  margin-top: 8px;
+  list-style-type: disc;
+}
+
+.qerunCard ul li {
+  margin-bottom: 4px;
+  color: var(--qerun-text);
+}
+
+.qerunCard code {
+  background: var(--qerun-card-secondary);
+  color: var(--qerun-accent);
+  padding: 2px 6px;
+  border-radius: var(--qerun-radius-sm);
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  border: 1px solid var(--qerun-border);
+}
+
+/* Utility Classes */
+.qerunMarginTop0 {
+  margin-top: 0;
+}
+
+.qerunMarginBottom12 {
+  margin-bottom: 12px;
+}
+
+.qerunMarginBottom16 {
+  margin-bottom: 16px;
+}
+
+.qerunMarginTop8 {
+  margin-top: 8px;
+}
+
+.qerunMarginTop24 {
+  margin-top: 24px;
+}
+
+.qerunFontSize14 {
+  font-size: 14px;
+}
+
+.qerunTextError {
+  color: var(--qerun-accent);
+  font-weight: 500;
 }

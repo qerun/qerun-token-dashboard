@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
+import styles from '../styles/qerunTheme.module.css';
 import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
@@ -182,69 +183,59 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <section
-      style={{
-        maxWidth: 520,
-        margin: '24px auto 80px',
-        padding: 24,
-        borderRadius: 8,
-        background: '#f7f9fc',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-      }}
-    >
-      <h3 style={{ marginTop: 0 }}>Admin Controls</h3>
-      <p style={{ marginBottom: 16 }}>
+    <section className={`${styles.qerunCard} ${styles.qerunNetworkCardSpacing}`}>
+      <h3 className={`${styles.qerunCardTitle} ${styles.qerunMarginTop0}`}>Admin Controls</h3>
+      <p className={styles.qerunCardSubtitle}>
         Manage the list of quote tokens that the swap contract recognises. The list you submit replaces the on-chain
         whitelist, so include every token you want to keep active.
       </p>
       {treasuryAddress && (
-        <div style={{ marginBottom: 12, fontSize: 14 }}>
+        <div className={`${styles.qerunMetricsPanel} ${styles.qerunMarginBottom16} ${styles.qerunFontSize14}`}>
           <div><b>Treasury:</b> {treasuryAddress}</div>
           <div><b>QER Token:</b> {qerTokenAddress}</div>
           <div><b>Treasury QER Balance:</b> {treasuryQerBalance ?? '—'}</div>
         </div>
       )}
       {!hasWallet && (
-        <p style={{ color: '#d32f2f', fontWeight: 500 }}>
+        <p className={`${styles.qerunTextError} ${styles.qerunMarginBottom16}`}>
           No wallet detected. Connect with an admin account to fetch or update pairs.
         </p>
       )}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className={`${styles.qerunButtonContainer} ${styles.qerunMarginBottom12}`}>
         <input
           type="text"
           value={inputAddress}
           onChange={event => setInputAddress(event.target.value)}
           placeholder="0x quote token address"
-          style={{ flex: 1, padding: '8px 10px', fontSize: 14 }}
         />
-        <button type="button" onClick={handleAdd} style={{ padding: '8px 12px' }}>
+        <button type="button" onClick={handleAdd}>
           Add
         </button>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <button type="button" onClick={handleIncludeDefault} style={{ padding: '6px 12px' }} disabled={!defaultQuote}>
+      <div className={`${styles.qerunButtonContainer} ${styles.qerunMarginBottom16}`}>
+                <button type="button" onClick={handleIncludeDefault} className={styles.qerunButtonSmall} disabled={!defaultQuote}>
           Include USD token
         </button>
-        <button type="button" onClick={handleReset} style={{ padding: '6px 12px' }}>
-          Reset to on-chain list
+        <button type="button" onClick={handleReset} className={styles.qerunButtonSmall}>
+          Reset
         </button>
-        <button type="button" onClick={loadPairs} style={{ padding: '6px 12px' }}>
+        <button type="button" onClick={loadPairs} className={styles.qerunButtonSmall}>
           Refresh
         </button>
       </div>
-      <div style={{ marginBottom: 16 }}>
+      <div className={styles.qerunMarginBottom16}>
         <strong>Draft pair list ({draftPairs.length}):</strong>
         {draftPairs.length === 0 ? (
-          <p style={{ marginTop: 8 }}>No tokens selected yet.</p>
+          <p className={styles.qerunMarginTop8}>No tokens selected yet.</p>
         ) : (
-          <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+          <ul>
             {draftPairs.map(address => (
-              <li key={address} style={{ marginBottom: 6 }}>
+              <li key={address}>
                 <code>{address}</code>{' '}
                 <button
                   type="button"
                   onClick={() => handleRemove(address)}
-                  style={{ marginLeft: 8, padding: '2px 6px', fontSize: 12 }}
+                  className={styles.qerunRemoveButton}
                 >
                   Remove
                 </button>
@@ -257,29 +248,21 @@ const AdminPanel: React.FC = () => {
         type="button"
         onClick={handleSubmit}
         disabled={loading}
-        style={{
-          padding: '10px 18px',
-          fontSize: 15,
-          borderRadius: 4,
-          border: 'none',
-          background: loading ? '#90caf9' : '#1976d2',
-          color: '#fff',
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
+        className={styles.qerunButtonLarge}
       >
         {loading ? 'Submitting…' : 'Submit updatePairs'}
       </button>
       {status && (
-        <p style={{ marginTop: 12, color: status.includes('failed') ? '#d32f2f' : '#1b5e20' }}>
+        <p className={`${styles.qerunStatus} ${status.includes('failed') ? styles.qerunStatusError : styles.qerunStatusSuccess}`}>
           {status}
         </p>
       )}
-      <div style={{ marginTop: 24 }}>
+      <div className={styles.qerunMarginTop24}>
         <strong>Current on-chain pairs ({currentPairs.length}):</strong>
         {currentPairs.length === 0 ? (
-          <p style={{ marginTop: 8 }}>No pairs registered yet.</p>
+          <p className={styles.qerunMarginTop8}>No pairs registered yet.</p>
         ) : (
-          <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+          <ul>
             {currentPairs.map(address => (
               <li key={address}>
                 <code>{address}</code>
@@ -289,12 +272,12 @@ const AdminPanel: React.FC = () => {
         )}
       </div>
       {configEntries.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+        <div className={styles.qerunMarginTop24}>
           <strong>StateManager Registry:</strong>
-          <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+          <ul>
             {configEntries.map(entry => (
               <li key={entry.label}>
-                <b>{entry.label}:</b> {entry.value}
+                <b>{entry.label}:</b> <code>{entry.value}</code>
               </li>
             ))}
           </ul>
