@@ -501,3 +501,137 @@
   color: var(--qerun-accent);
   font-weight: 500;
 }
+
+/* Wallet Selection Modal */
+.walletModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.walletModal {
+  background: var(--qerun-card);
+  backdrop-filter: blur(20px);
+  border-radius: var(--qerun-radius-xl);
+  border: 1px solid var(--qerun-gold-alpha-25);
+  box-shadow: 0 20px 60px var(--qerun-shadow-color);
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.walletModalTitle {
+  color: var(--qerun-gold);
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.walletModalSubtitle {
+  color: var(--qerun-text-muted);
+  font-size: 14px;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.walletOption {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--qerun-card-secondary);
+  border: 1px solid var(--qerun-border);
+  border-radius: var(--qerun-radius-lg);
+  color: var(--qerun-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none; /* For anchor tags */
+}
+
+.walletOption:hover {
+  background: var(--qerun-gold-alpha-10);
+  border-color: var(--qerun-gold-alpha-50);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--qerun-shadow-color);
+}
+
+.walletIcon {
+  font-size: 24px;
+  width: 32px;
+  text-align: center;
+}
+
+.walletName {
+  flex: 1;
+  text-align: left;
+}
+
+.externalLink {
+  font-size: 16px;
+  color: var(--qerun-text-muted);
+}
+
+.mobileHelpText {
+  font-size: 14px;
+  color: var(--qerun-text-muted);
+  text-align: center;
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--qerun-card-secondary);
+  border-radius: var(--qerun-radius-lg);
+  border: 1px solid var(--qerun-gold-alpha-25);
+}
+
+.walletModalClose {
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--qerun-border);
+  border-radius: var(--qerun-radius-lg);
+  color: var(--qerun-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.walletModalClose:hover {
+  background: var(--qerun-card-secondary);
+  color: var(--qerun-text);
+}
+
+/* Connect Container */
+.connectContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.connectHelpText {
+  font-size: 11px;
+  color: var(--qerun-text-muted);
+  margin: 0;
+  max-width: 200px;
+  text-align: right;
+  line-height: 1.3;
+}
