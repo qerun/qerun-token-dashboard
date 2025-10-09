@@ -12,6 +12,7 @@ const ERC20_ABI = [
     "function balanceOf(address) view returns (uint256)",
     "function approve(address,uint256) returns (bool)",
     "function decimals() view returns (uint8)",
+    "function totalSupply() view returns (uint256)",
 ];
 
 interface ResolvedAddresses {
@@ -385,6 +386,10 @@ const Swap: React.FC = () => {
                 <div className={styles.hero}>
                     <div className={styles.qerunMetricsPanel}>
                         <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>Current Rate</div>
+                            <div className={styles.qerunMetricValue}>{rate}</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
                             <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
                             <div className={styles.qerunMetricValue}>{swapUsdBalance} USD</div>
                         </div>
@@ -393,8 +398,12 @@ const Swap: React.FC = () => {
                             <div className={styles.qerunMetricValue}>{swapQerBalance} QER</div>
                         </div>
                         <div className={styles.qerunMetricCard}>
-                            <div className={styles.qerunMetricLabel}>Current Rate</div>
-                            <div className={styles.qerunMetricValue}>{rate}</div>
+                            <div className={styles.qerunMetricLabel}>USDQ Total Supply</div>
+                            <div className={styles.qerunMetricValue}>{usdTotalSupply}</div>
+                        </div>
+                        <div className={styles.qerunMetricCard}>
+                            <div className={styles.qerunMetricLabel}>QER Total Supply</div>
+                            <div className={styles.qerunMetricValue}>{qerTotalSupply}</div>
                         </div>
                     </div>
                 </div>
