@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 import styles from '../styles/qerunTheme.module.css';
 import { CONTRACT_CONFIG, REGISTRY_IDS, DEFAULT_DECIMALS } from '../config';
@@ -232,6 +232,17 @@ const Swap: React.FC = () => {
 
     const [amount, setAmount] = useState('');
 
+    // Check if user has sufficient balance for the swap
+    const hasInsufficientBalance = useMemo(() => {
+        if (!amount || !fromToken) return false;
+        
+        const swapAmount = parseFloat(amount);
+        if (isNaN(swapAmount) || swapAmount <= 0) return false;
+        
+        const userBalance = fromToken === 'USD' ? parseFloat(usdBalance) : parseFloat(qerBalance);
+        return userBalance < swapAmount;
+    }, [amount, fromToken, usdBalance, qerBalance]);
+
     const handleSwap = async (_e: React.FormEvent) => {
         if (!window.ethereum) {
             alert('No wallet found');
@@ -369,10 +380,18 @@ const Swap: React.FC = () => {
                     </div>
                     <button
                         type="submit"
+                        disabled={!amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
                         className={styles.qerunSwapButton}
                     >
-                        Swap now
+                        {hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
                     </button>
+                    
+                    {hasInsufficientBalance && (
+                        <div className={`${styles.qerunAlert} ${styles.qerunAlert__error} ${styles.qerunMarginTop8}`}>
+                            Insufficient {fromToken} balance. You have {fromToken === 'USD' ? usdBalance : qerBalance} {fromToken}.
+                        </div>
+                    )}
+                    
                     <div className={styles.qerunFooterNote}>Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps</div>
                 </form>
 
