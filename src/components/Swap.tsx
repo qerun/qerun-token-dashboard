@@ -4,7 +4,6 @@ import styles from '../styles/qerunTheme.module.css';
 import { CONTRACT_CONFIG, REGISTRY_IDS, DEFAULT_DECIMALS } from '../config';
 import StateManagerAbi from '../abi/StateManager.json';
 import SwapAbi from '../abi/Swap.json';
-import Connect from './Connect';
 import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
 
@@ -280,14 +279,8 @@ const Swap: React.FC = () => {
     };
 
     return (
-        <div className={styles.qerunPage}>
-            <div className={styles.qerunLogoContainer}>
-                <img src="/logo.png" alt="Qerun crown logo" width="96" height="96" className={styles.qerunLogo} />
-                <span className={styles.qerunBadge}>Qerun Ecosystem</span>
-            </div>
-
-            <div className={styles.qerunLayout}>
-                <form onSubmit={handleSwap} className={styles.qerunCard}>
+        <>
+            <form onSubmit={handleSwap} className={styles.qerunCard}>
                     <div className={styles.cardHeader}>
                         <h2 className={styles.qerunCardTitle}>Swap tokens</h2>
                         <p className={styles.qerunCardSubtitle}>Choose the direction, enter an amount, and confirm with your wallet.</p>
@@ -433,12 +426,7 @@ const Swap: React.FC = () => {
                         </button>
                     </div>
                 </div>
-
-                <div className={styles.qerunConnectFixed}>
-                    <Connect />
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 
