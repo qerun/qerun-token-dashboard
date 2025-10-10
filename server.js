@@ -32,6 +32,8 @@ app.get('*', (_req, res) => {
   let html = fs.readFileSync(indexPath, 'utf-8')
 
   const runtimeConfig = getRuntimeConfig()
+  // Debug log to verify runtime envs in Cloud Run
+  console.log('Injecting runtime config:', runtimeConfig)
   const injection = `<script>window.__RUNTIME_CONFIG=${JSON.stringify(runtimeConfig)}</script>`
 
   // Inject just before closing head if present, else prepend
