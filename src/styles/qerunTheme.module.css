@@ -409,6 +409,23 @@
   cursor: not-allowed;
 }
 
+/* Inline spinner for async actions (inherits current text color) */
+@keyframes qerunSpin {
+  to { transform: rotate(360deg); }
+}
+
+.qerunSpinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: qerunSpin 0.8s linear infinite;
+}
+
 .qerunCard button.qerunButton__small {
   padding: 6px 12px;
   font-size: 12px;

@@ -401,7 +401,8 @@ const Swap: React.FC = () => {
                         disabled={isSwapping || !amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
                         className={styles.qerunSwapButton}
                     >
-                        {isSwapping ? 'Swapping...' : hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
+                        {isSwapping && <span className={styles.qerunSpinner} aria-hidden="true" />}
+                        {isSwapping ? 'Swapping…' : hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
                     </button>
                     
                     {hasInsufficientBalance && (
