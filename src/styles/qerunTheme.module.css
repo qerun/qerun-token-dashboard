@@ -77,6 +77,25 @@
   overflow-x: hidden;
 }
 
+/* Legacy alias used by App.tsx wrapper */
+.qerunRoot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background-image:
+    radial-gradient(circle at 20% -10%, var(--qerun-gold-alpha-45), transparent 55%),
+    radial-gradient(circle at 80% 0%, var(--qerun-accent-alpha-40), transparent 60%);
+  background-color: var(--qerun-bg);
+  box-sizing: border-box;
+  color: var(--qerun-text);
+  font-family: var(--qerun-font-family);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .qerunLayout {
   max-width: 1024px;
   margin: 0 auto;
@@ -159,6 +178,72 @@
   letter-spacing: 0.2em;
   color: var(--qerun-badge-text);
   text-transform: uppercase;
+}
+
+/* Buttons and links */
+.qerunBtnRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.qerunButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: 1px solid var(--qerun-border);
+  background: var(--qerun-button-bg);
+  color: var(--qerun-button-text);
+  font-weight: var(--qerun-font-weight-semibold);
+  box-shadow: 0 8px 24px 0 #f7d97699;
+  transition: transform 120ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.qerunButton:link,
+.qerunButton:visited {
+  color: var(--qerun-button-text);
+  text-decoration: none;
+}
+
+.qerunButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px 0 #f7d976aa;
+}
+
+.qerunButton:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 18px 0 #f7d97680;
+}
+
+.qerunButton:focus-visible {
+  outline: 2px solid var(--qerun-border);
+  outline-offset: 2px;
+}
+
+.qerunButtonRound {
+  border-radius: var(--qerun-radius-round);
+}
+
+.qerunButtonSm {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.qerunLink {
+  color: var(--qerun-gold);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--qerun-gold-alpha-35);
+}
+
+.qerunLink:link,
+.qerunLink:visited {
+  color: var(--qerun-gold);
+  text-decoration: none;
+}
+
+.qerunLink:hover {
+  border-bottom-style: solid;
 }
 
 .qerunLogoContainer {
@@ -497,6 +582,60 @@
 }
 
 /* Utility Classes */
+.qerunHeading { font-size: 1.125rem; font-weight: 600; color: var(--qerun-white); }
+.qerunHeadingXl { font-size: 1.5rem; font-weight: 600; color: var(--qerun-white); }
+.qerunTextSm { font-size: 0.875rem; }
+.qerunText { color: var(--qerun-text); }
+.qerunTextMuted { color: var(--qerun-text-alpha-78); }
+.qerunTextSemi { font-weight: 600; }
+.qerunMarginTop2 { margin-top: 8px; }
+.qerunMarginTop6 { margin-top: 24px; }
+.qerunVStackLg { display: grid; gap: 24px; }
+.qerunList { display: grid; gap: 12px; margin-top: 24px; font-size: 0.875rem; }
+
+/* Roadmap cards grid */
+.qerunCards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .qerunCards {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 8; /* stick together on desktop */
+  }
+}
+
+/* Make cards fill grid columns and remove inner margins in the row */
+.qerunCards .qerunCard {
+  max-width: none;
+  width: 100%;
+  margin: 0; /* remove auto centering and top margin */
+}
+.qerunButtonRound { border-radius: var(--qerun-radius-round); }
+.qerunButtonSm { padding: 8px 16px; font-size: 0.875rem; }
+
+/* Responsive card orientation helpers */
+.qerunCardVH {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .qerunCardVH { flex-direction: row; align-items: center; }
+}
+
+.qerunCardHV {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .qerunCardHV { flex-direction: column; }
+}
+
+.qerunCardContent { flex: 1; display: grid; gap: 8px; }
 .qerunMarginTop0 {
   margin-top: 0;
 }
