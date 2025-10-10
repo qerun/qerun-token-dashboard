@@ -6,6 +6,11 @@ COPY package*.json ./
 RUN apk add --no-cache python3 make g++ && npm ci
 
 COPY . .
+# Accept Vite build-time variables via build args and expose as ENV for the build
+ARG VITE_STATE_MANAGER_ADDRESS
+ARG VITE_CHAIN_ID
+ENV VITE_STATE_MANAGER_ADDRESS=$VITE_STATE_MANAGER_ADDRESS
+ENV VITE_CHAIN_ID=$VITE_CHAIN_ID
 
 RUN npm run build && npm prune --omit=dev
 
