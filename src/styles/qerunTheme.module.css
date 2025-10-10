@@ -369,6 +369,13 @@
   background: var(--qerun-error-dark);
 }
 
+.qerunConnectButton:disabled,
+.qerunConnectButton.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--qerun-text-muted);
+}
+
 /* Admin Panel Styles - Tag-based selectors within .qerunCard */
 .qerunCard input {
   flex: 1;
