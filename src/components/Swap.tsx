@@ -6,7 +6,7 @@ import StateManagerAbi from '../abi/StateManager.json';
 import SwapAbi from '../abi/Swap.json';
 import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
-import { useAccount } from 'wagmi';
+import { useAccount, useBlockNumber } from 'wagmi';
 
 const ERC20_ABI = [
     "function balanceOf(address) view returns (uint256)",
@@ -25,6 +25,7 @@ const BPS = 10000n;
 
 const Swap: React.FC = () => {
     const { address: connectedAddress, chainId: connectedChainId } = useAccount();
+    const { data: blockNumber } = useBlockNumber({ watch: true });
     const [addresses, setAddresses] = useState<ResolvedAddresses | null>(null);
     const [usdBalance, setUsdBalance] = useState('0');
     const [qerBalance, setQerBalance] = useState('0');
@@ -182,12 +183,9 @@ const Swap: React.FC = () => {
     }, [connectedAddress, connectedChainId]);
 
     useEffect(() => {
+        // refresh on every new block and on hook mount
         void loadState();
-        const intervalId = setInterval(() => {
-            void loadState();
-        }, 1000);
-        return () => clearInterval(intervalId);
-    }, [loadState]);
+    }, [blockNumber, loadState]);
 
     const estimateAmountOut = useCallback(
         (inputAmount: bigint, source: 'USD' | 'QER'): bigint => {
