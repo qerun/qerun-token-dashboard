@@ -101,6 +101,9 @@ function App() {
             <Box>
               <Paper elevation={0} sx={{ p: 3, borderRadius: 'var(--qerun-radius-xl)', border: '1px solid var(--qerun-gold-alpha-25)', backdropFilter: 'blur(10px)', background: 'var(--qerun-card)' }}>
                 <Stack spacing={2}>
+                  <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
+                    <Connect />
+                  </Box>
                   <Typography variant="h5" sx={{ color: 'var(--qerun-gold)', fontWeight: 700 }}>Network & Status</Typography>
                   <Metrics {...metrics} />
                   <NetworkManager onAfterSwitch={() => setRefreshKey((v) => v + 1)} />
