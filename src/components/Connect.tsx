@@ -25,24 +25,20 @@ const Connect: React.FC = () => {
 
   // Initialize WalletConnect Modal
   useEffect(() => {
-    // Delay WalletConnect initialization to avoid immediate API calls
-    const timer = setTimeout(() => {
-      try {
-        // Using a demo project ID for development - replace with your own from WalletConnect Cloud
-        const modal = new WalletConnectModal({
-          projectId: 'd9f61ed66163e5f8c12e1c7d633792a6', // Replace with your actual project ID from https://cloud.walletconnect.com
-          chains: ['eip155:1'],
-          themeMode: 'dark'
-        });
-        setWalletConnectModal(modal);
-      } catch (error) {
-        console.error('Failed to initialize WalletConnect:', error);
-        // Fallback: set modal to null so the UI still works without WalletConnect
-        setWalletConnectModal(null);
-      }
-    }, 1000); // Delay by 1 second
-
-    return () => clearTimeout(timer);
+    // Initialize WalletConnect immediately to avoid delays
+    try {
+      // Using a demo project ID for development - replace with your own from WalletConnect Cloud
+      const modal = new WalletConnectModal({
+        projectId: 'd9f61ed66163e5f8c12e1c7d633792a6', // Replace with your actual project ID from https://cloud.walletconnect.com
+        chains: ['eip155:1'],
+        themeMode: 'dark'
+      });
+      setWalletConnectModal(modal);
+    } catch (error) {
+      console.error('Failed to initialize WalletConnect:', error);
+      // Fallback: set modal to null so the UI still works without WalletConnect
+      setWalletConnectModal(null);
+    }
   }, []);
 
   useEffect(() => {

@@ -58,7 +58,7 @@ const Swap: React.FC = () => {
 
         setNetworkWarning(null);
 
-        const accounts: string[] = await provider.send('eth_requestAccounts', []);
+        const accounts: string[] = await provider.send('eth_accounts', []);
         if (!accounts || accounts.length === 0) return;
         const activeAccount = accounts[0];
 
