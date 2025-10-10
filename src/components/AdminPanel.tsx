@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
-import styles from '../styles/qerunTheme.module.css';
+import { Paper, Typography, Stack, Box, Button, TextField, Chip, Alert } from '@mui/material';
 import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
@@ -215,107 +215,87 @@ const AdminPanel: React.FC = () => {
   }
 
   return (
-    <section className={`${styles.qerunCard} ${styles.qerunNetworkCardSpacing}`}>
-      <h3 className={`${styles.qerunCardTitle} ${styles.qerunMarginTop0}`}>Admin Controls</h3>
-      <p className={styles.qerunCardSubtitle}>
-        Manage the list of quote tokens that the swap contract recognises. The list you submit replaces the on-chain
-        whitelist, so include every token you want to keep active.
-      </p>
+    <Paper elevation={0} sx={{ p: 3, borderRadius: 'var(--qerun-radius-xl)', border: '1px solid var(--qerun-gold-alpha-25)', backdropFilter: 'blur(10px)', background: 'var(--qerun-card)' }}>
+      <Typography variant="h5" sx={{ color: 'var(--qerun-gold)', fontWeight: 700, m: 0 }}>Admin Controls</Typography>
+      <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)', mb: 2 }}>
+        Manage the list of quote tokens that the swap contract recognises. The list you submit replaces the on-chain whitelist, so include every token you want to keep active.
+      </Typography>
+
       {treasuryAddress && (
-        <div className={`${styles.qerunMetricsPanel} ${styles.qerunMarginBottom16} ${styles.qerunFontSize14}`}>
-          <div><b>Treasury:</b> {treasuryAddress}</div>
-          <div><b>QER Token:</b> {qerTokenAddress}</div>
-          <div><b>Treasury QER Balance:</b> {treasuryQerBalance ?? '—'}</div>
-        </div>
+        <Box sx={{ p: 2, borderRadius: 2, border: '1px solid var(--qerun-gold-alpha-18)', mb: 2 }}>
+          <Typography variant="body2"><b>Treasury:</b> {treasuryAddress}</Typography>
+          <Typography variant="body2"><b>QER Token:</b> {qerTokenAddress}</Typography>
+          <Typography variant="body2"><b>Treasury QER Balance:</b> {treasuryQerBalance ?? '—'}</Typography>
+        </Box>
       )}
+
       {!hasWallet && (
-        <p className={`${styles.qerunTextError} ${styles.qerunMarginBottom16}`}>
-          No wallet detected. Connect with an admin account to fetch or update pairs.
-        </p>
+        <Alert severity="warning" sx={{ mb: 2 }}>No wallet detected. Connect with an admin account to fetch or update pairs.</Alert>
       )}
-      <div className={`${styles.qerunButtonContainer} ${styles.qerunMarginBottom12}`}>
-        <input
-          type="text"
-          value={inputAddress}
-          onChange={event => setInputAddress(event.target.value)}
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
           placeholder="0x quote token address"
+          value={inputAddress}
+          onChange={(e) => setInputAddress(e.target.value)}
         />
-        <button type="button" onClick={handleAdd}>
-          Add
-        </button>
-      </div>
-      <div className={`${styles.qerunButtonContainer} ${styles.qerunMarginBottom16}`}>
-                <button type="button" onClick={handleIncludeDefault} className={styles.qerunButton__small} disabled={!defaultQuote}>
-          Include USD token
-        </button>
-        <button type="button" onClick={handleReset} className={styles.qerunButton__small}>
-          Reset
-        </button>
-        <button type="button" onClick={loadPairs} className={styles.qerunButton__small}>
-          Refresh
-        </button>
-      </div>
-      <div className={styles.qerunMarginBottom16}>
-        <strong>Draft pair list ({draftPairs.length}):</strong>
+        <Button variant="contained" onClick={handleAdd}>Add</Button>
+      </Stack>
+
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+        <Button size="small" variant="outlined" onClick={handleIncludeDefault} disabled={!defaultQuote}>Include USD token</Button>
+        <Button size="small" variant="outlined" onClick={handleReset}>Reset</Button>
+        <Button size="small" variant="outlined" onClick={loadPairs}>Refresh</Button>
+      </Stack>
+
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2">Draft pair list ({draftPairs.length}):</Typography>
         {draftPairs.length === 0 ? (
-          <p className={styles.qerunMarginTop8}>No tokens selected yet.</p>
+          <Typography variant="body2" sx={{ mt: 1 }}>No tokens selected yet.</Typography>
         ) : (
-          <ul>
-            {draftPairs.map(address => (
-              <li key={address}>
-                <code>{address}</code>{' '}
-                <button
-                  type="button"
-                  onClick={() => handleRemove(address)}
-                  className={styles.qerunButton__danger}
-                >
-                  Remove
-                </button>
-              </li>
+          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+            {draftPairs.map((address) => (
+              <Chip key={address} label={address} onDelete={() => handleRemove(address)} variant="outlined" />
             ))}
-          </ul>
+          </Stack>
         )}
-      </div>
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={loading}
-        className={styles.qerunButton__large}
-      >
+      </Box>
+
+      <Button variant="contained" onClick={handleSubmit} disabled={loading}>
         {loading ? 'Submitting…' : 'Submit updatePairs'}
-      </button>
+      </Button>
+
       {status && (
-        <p className={`${styles.qerunAlert} ${status.includes('failed') ? styles.qerunAlert__error : styles.qerunAlert__success}`}>
-          {status}
-        </p>
+        <Alert sx={{ mt: 2 }} severity={status.includes('failed') ? 'error' : 'success'}>{status}</Alert>
       )}
-      <div className={styles.qerunMarginTop24}>
-        <strong>Current on-chain pairs ({currentPairs.length}):</strong>
+
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="subtitle2">Current on-chain pairs ({currentPairs.length}):</Typography>
         {currentPairs.length === 0 ? (
-          <p className={styles.qerunMarginTop8}>No pairs registered yet.</p>
+          <Typography variant="body2" sx={{ mt: 1 }}>No pairs registered yet.</Typography>
         ) : (
-          <ul>
-            {currentPairs.map(address => (
-              <li key={address}>
-                <code>{address}</code>
-              </li>
+          <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
+            {currentPairs.map((address) => (
+              <Box component="li" key={address}><code>{address}</code></Box>
             ))}
-          </ul>
+          </Stack>
         )}
-      </div>
+      </Box>
+
       {configEntries.length > 0 && (
-        <div className={styles.qerunMarginTop24}>
-          <strong>StateManager Registry:</strong>
-          <ul>
-            {configEntries.map(entry => (
-              <li key={entry.label}>
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="subtitle2">StateManager Registry:</Typography>
+          <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
+            {configEntries.map((entry) => (
+              <Box component="li" key={entry.label}>
                 <b>{entry.label}:</b> <code>{entry.value}</code>
-              </li>
+              </Box>
             ))}
-          </ul>
-        </div>
+          </Stack>
+        </Box>
       )}
-    </section>
+    </Paper>
   );
 };
 

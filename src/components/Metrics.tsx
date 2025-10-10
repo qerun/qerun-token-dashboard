@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/qerunTheme.module.css';
+import { Box, Paper, Typography } from '@mui/material';
 
 export type MetricsData = {
   swapUsdBalance: string;
@@ -10,31 +10,21 @@ export type MetricsData = {
 
 type Props = MetricsData;
 
-const Metrics: React.FC<Props> = ({
-  swapUsdBalance,
-  swapQerBalance,
-  usdTotalSupply,
-  qerTotalSupply,
-}) => {
+const MetricCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, background: 'var(--qerun-card)' }}>
+    <Typography variant="caption" sx={{ color: 'var(--qerun-gold)' }}>{label}</Typography>
+    <Typography variant="h6" sx={{ m: 0, color: 'var(--qerun-text-light)' }}>{value}</Typography>
+  </Paper>
+);
+
+const Metrics: React.FC<Props> = ({ swapUsdBalance, swapQerBalance, usdTotalSupply, qerTotalSupply }) => {
   return (
-    <div className={styles.qerunMetricsPanel}>
-      <div className={styles.qerunMetricCard}>
-        <div className={styles.qerunMetricLabel}>Swap USD Balance</div>
-        <div className={styles.qerunMetricValue}>{swapUsdBalance} USD</div>
-      </div>
-      <div className={styles.qerunMetricCard}>
-        <div className={styles.qerunMetricLabel}>Swap QER Balance</div>
-        <div className={styles.qerunMetricValue}>{swapQerBalance} QER</div>
-      </div>
-      <div className={styles.qerunMetricCard}>
-        <div className={styles.qerunMetricLabel}>USDQ Total Supply</div>
-        <div className={styles.qerunMetricValue}>{usdTotalSupply}</div>
-      </div>
-      <div className={styles.qerunMetricCard}>
-        <div className={styles.qerunMetricLabel}>QER Total Supply</div>
-        <div className={styles.qerunMetricValue}>{qerTotalSupply}</div>
-      </div>
-    </div>
+    <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
+      <MetricCard label="Swap USD Balance" value={`${swapUsdBalance} USD`} />
+      <MetricCard label="Swap QER Balance" value={`${swapQerBalance} QER`} />
+      <MetricCard label="USDQ Total Supply" value={usdTotalSupply} />
+      <MetricCard label="QER Total Supply" value={qerTotalSupply} />
+    </Box>
   );
 };
 

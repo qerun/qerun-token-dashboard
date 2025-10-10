@@ -1,6 +1,19 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
-import styles from '../styles/qerunTheme.module.css';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { CONTRACT_CONFIG, REGISTRY_IDS, DEFAULT_DECIMALS } from '../config';
 import StateManagerAbi from '../abi/StateManager.json';
 import SwapAbi from '../abi/Swap.json';
@@ -308,120 +321,145 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
     };
 
     return (
-        <>
-            <form onSubmit={handleSwap} className={styles.qerunMetricCard}>
-                <div className={styles.cardHeader}>
-                    <h2 className={styles.qerunCardTitle}>Swap tokens</h2>
-                    <p className={styles.qerunCardSubtitle}>Choose the direction, enter an amount, and confirm with your wallet.</p>
-                </div>
-                <div className={styles.qerunMetricCard}>
-                    <div className={styles.qerunMetricLabel}>Current Rate</div>
-                    <div className={styles.qerunMetricValue}>{rate}</div>
-                </div>
-                {networkWarning && <div className={styles.warning}>{networkWarning}</div>}
-                <div className={styles.qerunSelectorGroup}>
-                    <label className={styles.qerunLabel}>
-                        From token
-                        <select
-                            value={fromToken}
-                            onChange={e => handleFromTokenChange(e.target.value as 'USD' | 'QER')}
-                            className={styles.qerunSelect}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="QER">QER</option>
-                        </select>
-                    </label>
-                    <label className={styles.qerunLabel}>
-                        To token
-                        <select
-                            value={toToken}
-                            onChange={e => handleToTokenChange(e.target.value as 'USD' | 'QER')}
-                            className={styles.qerunSelect}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="QER">QER</option>
-                        </select>
-                    </label>
-                    <label className={styles.qerunLabel}>
-                        Amount in {fromToken}
-                        <input
-                            type="number"
-                            placeholder="0.00"
-                            value={amount}
-                            onChange={e => setAmount(e.target.value)}
-                            className={styles.qerunInput}
-                        />
-                        <div className={styles.qerunBalanceDisplay}>
-                            Balance: {fromToken === 'USD' ? `${usdBalance} USD` : `${qerBalance} QER`}
-                        </div>
-                    </label>
-                    {amount && parseFloat(amount) > 0 && (
-                        <div className={styles.qerunEstimate}>
-                            Estimated: {(() => {
-                                const numAmount = parseFloat(amount);
-                                const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
-                                const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
-                                const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
-                                return ethers.formatUnits(estimatedBigInt, outputDecimals);
-                            })()} {toToken}
-                            <br />
-                            Min received: {(() => {
-                                const numAmount = parseFloat(amount);
-                                const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
-                                const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
-                                const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
-                                const minBigInt = estimatedBigInt > 0n ? (estimatedBigInt * 98n) / 100n : 0n;
-                                return ethers.formatUnits(minBigInt, outputDecimals);
-                            })()} {toToken} (2% slippage)
-                            <br />
-                            Price impact: {(() => {
-                                const numAmount = parseFloat(amount);
-                                if (numAmount <= 0) return '0.00%';
-                                const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
-                                const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
-                                const outputAmount = estimateAmountOut(inputAmount, fromToken);
+      <Paper
+        component="form"
+        onSubmit={handleSwap}
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: 'var(--qerun-radius-xl)',
+          border: '1px solid var(--qerun-gold-alpha-25)',
+          backdropFilter: 'blur(10px)',
+          background: 'var(--qerun-card)',
+          color: 'var(--qerun-text)'
+        }}
+      >
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h5" sx={{ color: 'var(--qerun-gold)', fontWeight: 700 }}>
+              Swap tokens
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)' }}>
+              Choose the direction, enter an amount, and confirm with your wallet.
+            </Typography>
+          </Box>
 
-                                // Spot rate: for USD->QER, spot = reserveQer / reserveUsd
-                                // Effective rate = outputAmount / inputAmount
-                                let spotRate: number;
-                                let effectiveRate: number;
+          {networkWarning && (
+            <Alert severity="warning" variant="outlined">{networkWarning}</Alert>
+          )}
 
-                                if (fromToken === 'USD') {
-                                    spotRate = Number(ethers.formatUnits(reserveQer, qerDecimals)) / Number(ethers.formatUnits(reserveUsd, usdDecimals));
-                                    effectiveRate = Number(ethers.formatUnits(outputAmount, qerDecimals)) / numAmount;
-                                } else {
-                                    spotRate = Number(ethers.formatUnits(reserveUsd, usdDecimals)) / Number(ethers.formatUnits(reserveQer, qerDecimals));
-                                    effectiveRate = Number(ethers.formatUnits(outputAmount, usdDecimals)) / numAmount;
-                                }
+          <Paper variant="outlined" sx={{ p: 2, background: 'var(--qerun-card)' }}>
+            <Typography variant="caption" sx={{ color: 'var(--qerun-gold)' }}>Current Rate</Typography>
+            <Typography variant="h6" sx={{ m: 0, color: 'var(--qerun-text-light)' }}>{rate}</Typography>
+          </Paper>
 
-                                const impact = ((spotRate - effectiveRate) / spotRate) * 100;
-                                return impact.toFixed(2) + '%';
-                            })()}
-                        </div>
-                    )}
-                    <div className={styles.qerunMetricCard}>
-                        <div className={styles.qerunMetricLabel}>Current Rate</div>
-                        <div className={styles.qerunMetricValue}>{rate}</div>
-                    </div>
-                </div>
-                <button
-                    type="submit"
-                    disabled={isSwapping || !amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
-                    className={styles.qerunSwapButton}
-                >
-                    {isSwapping && <span className={styles.qerunSpinner} aria-hidden="true" />}
-                    {isSwapping ? 'Swapping…' : hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
-                </button>
+          <Stack spacing={2}>
+            <FormControl fullWidth>
+              <InputLabel id="from-token-label">From token</InputLabel>
+              <Select
+                labelId="from-token-label"
+                label="From token"
+                value={fromToken}
+                onChange={(e) => handleFromTokenChange(e.target.value as 'USD' | 'QER')}
+              >
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="QER">QER</MenuItem>
+              </Select>
+            </FormControl>
 
-                {hasInsufficientBalance && (
-                    <div className={`${styles.qerunAlert} ${styles.qerunAlert__error} ${styles.qerunMarginTop8}`}>
-                        Insufficient {fromToken} balance. You have {fromToken === 'USD' ? usdBalance : qerBalance} {fromToken}.
-                    </div>
-                )}
+            <FormControl fullWidth>
+              <InputLabel id="to-token-label">To token</InputLabel>
+              <Select
+                labelId="to-token-label"
+                label="To token"
+                value={toToken}
+                onChange={(e) => handleToTokenChange(e.target.value as 'USD' | 'QER')}
+              >
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="QER">QER</MenuItem>
+              </Select>
+            </FormControl>
 
-                <div className={styles.qerunFooterNote}>Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps</div>
-            </form>
-        </>
+            <TextField
+              type="number"
+              label={`Amount in ${fromToken}`}
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              inputProps={{ min: 0, step: 'any' }}
+              fullWidth
+            />
+            <Typography variant="caption" align="right" sx={{ color: 'var(--qerun-text-muted)' }}>
+              Balance: {fromToken === 'USD' ? `${usdBalance} USD` : `${qerBalance} QER`}
+            </Typography>
+
+            {amount && parseFloat(amount) > 0 && (
+              <Box sx={{ color: 'var(--qerun-text-muted)', fontSize: 14 }}>
+                Estimated: {(() => {
+                  const numAmount = parseFloat(amount);
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                  const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
+                  return ethers.formatUnits(estimatedBigInt, outputDecimals);
+                })()} {toToken}
+                <br />
+                Min received: {(() => {
+                  const numAmount = parseFloat(amount);
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                  const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
+                  const minBigInt = estimatedBigInt > 0n ? (estimatedBigInt * 98n) / 100n : 0n;
+                  return ethers.formatUnits(minBigInt, outputDecimals);
+                })()} {toToken} (2% slippage)
+                <br />
+                Price impact: {(() => {
+                  const numAmount = parseFloat(amount);
+                  if (numAmount <= 0) return '0.00%';
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                  const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
+                  const outputAmount = estimateAmountOut(inputAmount, fromToken);
+                  let spotRate: number;
+                  let effectiveRate: number;
+                  if (fromToken === 'USD') {
+                    spotRate = Number(ethers.formatUnits(reserveQer, qerDecimals)) / Number(ethers.formatUnits(reserveUsd, usdDecimals));
+                    effectiveRate = Number(ethers.formatUnits(outputAmount, qerDecimals)) / numAmount;
+                  } else {
+                    spotRate = Number(ethers.formatUnits(reserveUsd, usdDecimals)) / Number(ethers.formatUnits(reserveQer, qerDecimals));
+                    effectiveRate = Number(ethers.formatUnits(outputAmount, usdDecimals)) / numAmount;
+                  }
+                  const impact = ((spotRate - effectiveRate) / spotRate) * 100;
+                  return impact.toFixed(2) + '%';
+                })()}
+              </Box>
+            )}
+
+            {hasInsufficientBalance && (
+              <Alert severity="error">
+                Insufficient {fromToken} balance. You have {fromToken === 'USD' ? usdBalance : qerBalance} {fromToken}.
+              </Alert>
+            )}
+          </Stack>
+
+          <Box>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={isSwapping || !amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
+              sx={{
+                borderRadius: 'var(--qerun-radius-xl, 16px)'
+              }}
+              startIcon={isSwapping ? <CircularProgress size={16} color="inherit" /> : undefined}
+            >
+              {isSwapping ? 'Swapping…' : hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
+            </Button>
+          </Box>
+
+          <Typography variant="caption" align="center" sx={{ color: 'var(--qerun-text-muted)' }}>
+            Treasury fee: {(Number(feeBps) / 100).toFixed(2)} bps
+          </Typography>
+        </Stack>
+      </Paper>
     );
 };
 

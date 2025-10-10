@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/qerunTheme.module.css';
+import { Button, Stack } from '@mui/material';
 import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
 
@@ -20,27 +20,36 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
 
   const handleSwitchNetwork = async () => {
     await switchToSepolia();
-    // Let the parent refresh its state (e.g., re-read contracts/balances)
     onAfterSwitch?.();
   };
 
   return (
-    <div className={`${styles.qerunCard} ${styles.qerunNetworkCardSpacing}`}>
-      <div>
-        <h3 className={styles.qerunCardTitle}>Network & Tokens</h3>
-      </div>
-      <div className={styles.qerunButtonContainer}>
-        <button onClick={handleSwitchNetwork} className={styles.qerunSwapButton}>
-          Switch to Sepolia
-        </button>
-        <button onClick={handleAddQER} className={styles.qerunSwapButton}>
-          Add QER Token
-        </button>
-        <button onClick={handleAddUSDQ} className={styles.qerunSwapButton}>
-          Add USDQ Token
-        </button>
-      </div>
-    </div>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap' }}>
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={handleSwitchNetwork}
+        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+      >
+        Switch to Sepolia
+      </Button>
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={handleAddQER}
+        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+      >
+        Add QER Token
+      </Button>
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={handleAddUSDQ}
+        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+      >
+        Add USDQ Token
+      </Button>
+    </Stack>
   );
 };
 

@@ -1,10 +1,10 @@
 import React from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import styles from '../styles/qerunTheme.module.css';
+import { Button, Typography, Box } from '@mui/material';
 
 const Connect: React.FC = () => {
   return (
-    <div className={styles.connectContainer}>
+    <Box>
       <ConnectButton.Custom>
         {({ account, chain, mounted, openAccountModal, openChainModal, openConnectModal }) => {
           const ready = mounted;
@@ -18,14 +18,15 @@ const Connect: React.FC = () => {
               : `Manage Wallet (${account.displayName})`;
 
           return (
-            <div
+            <Box
               {...(!ready && {
                 'aria-hidden': true,
                 style: { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
               })}
             >
-              <button
-                type="button"
+              <Button
+                color="primary"
+                variant="contained"
                 disabled={!ready}
                 onClick={() => {
                   if (!connected) {
@@ -36,27 +37,29 @@ const Connect: React.FC = () => {
                     openAccountModal();
                   }
                 }}
-                className={`${styles.qerunConnectButton} ${connected && !unsupported ? styles.connected : ''} ${
-                  !ready || unsupported ? styles.disabled : ''
-                }`}
+                sx={{
+                  background: 'var(--qerun-button-bg)',
+                  color: 'var(--qerun-button-text)',
+                  borderRadius: 'var(--qerun-radius-xl, 16px)'
+                }}
               >
                 {buttonLabel}
-              </button>
+              </Button>
               {connected && !unsupported && (
-                <p className={styles.connectHelpText}>
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'var(--qerun-text-muted)' }}>
                   💡 Use the wallet modal to disconnect or switch accounts.
-                </p>
+                </Typography>
               )}
               {unsupported && (
-                <p className={styles.connectHelpText}>
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'var(--qerun-accent)' }}>
                   ⚠️ Network unsupported. Click the button to switch networks.
-                </p>
+                </Typography>
               )}
-            </div>
+            </Box>
           );
         }}
       </ConnectButton.Custom>
-    </div>
+    </Box>
   );
 };
 
