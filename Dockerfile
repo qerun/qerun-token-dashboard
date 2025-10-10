@@ -13,6 +13,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV VITE_STATE_MANAGER_ADDRESS=0x1C6C9E256808dDaAe723E917cE700fDE3Ce1B73A
+ENV VITE_CHAIN_ID=11155111
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
