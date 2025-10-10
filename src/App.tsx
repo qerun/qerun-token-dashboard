@@ -84,8 +84,12 @@ function App() {
         }}
       >
         <Logo />
-        <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+        <Container maxWidth={false} disableGutters sx={{ py: { xs: 4, md: 8 } }}>
           <Box sx={{
+            width: { xs: '100vw', md: 'auto' },
+            maxWidth: { xs: '100%', md: 1200 },
+            mx: 'auto',
+            px: { xs: 2, md: 0 },
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
             gap: 4,
