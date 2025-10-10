@@ -1,0 +1,33 @@
+# Cloud Build pipeline for qerun-token-dashboard
+# Builds and pushes a Docker image, injecting Vite build-time env via build args.
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - gcr.io/$PROJECT_ID/qerun-dashboard:$SHORT_SHA
+      - --build-arg
+      - VITE_STATE_MANAGER_ADDRESS=$_VITE_STATE_MANAGER_ADDRESS
+      - --build-arg
+      - VITE_CHAIN_ID=$_VITE_CHAIN_ID
+      - --build-arg
+      - VITE_CHAIN_RPC_URL=$_VITE_CHAIN_RPC_URL
+      - --build-arg
+      - VITE_CHAIN_EXPLORER_URL=$_VITE_CHAIN_EXPLORER_URL
+      - --build-arg
+      - VITE_WALLETCONNECT_PROJECT_ID=$_VITE_WALLETCONNECT_PROJECT_ID
+      - .
+
+images:
+  - gcr.io/$PROJECT_ID/qerun-dashboard:$SHORT_SHA
+
+# Usage:
+#   gcloud builds submit qerun-token-dashboard \
+#     --config cloudbuild.yaml \
+#     --substitutions=_VITE_STATE_MANAGER_ADDRESS=0xYourAddress,_VITE_CHAIN_ID=11155111,_VITE_CHAIN_RPC_URL=https://...,_VITE_CHAIN_EXPLORER_URL=https://...,_VITE_WALLETCONNECT_PROJECT_ID=your_wc_id
+# Then deploy:
+#   gcloud run deploy qerun-dashboard \
+#     --image gcr.io/$PROJECT_ID/qerun-dashboard:$SHORT_SHA \
+#     --allow-unauthenticated --region us-central1
+
