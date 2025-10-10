@@ -20,4 +20,3 @@ app.get('*', (_req, res) => {
 app.listen(port, () => {
   console.log(`Dashboard listening on ${port}`)
 })
-

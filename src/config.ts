@@ -3,9 +3,10 @@ import { ethers } from 'ethers';
 type RequiredKey = 'VITE_STATE_MANAGER_ADDRESS';
 
 function requireEnv(key: RequiredKey): string {
-  const value = import.meta.env[key];
+  // Try Vite env first, then system env
+  const value = import.meta.env[key] ?? process.env[key];
   if (!value) {
-    throw new Error(`Missing environment variable ${key}. Check your .env configuration.`);
+    throw new Error(`Missing environment variable ${key}. Check your .env configuration and system environment.`);
   }
   return value;
 }
