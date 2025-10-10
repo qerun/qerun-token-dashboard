@@ -6,22 +6,12 @@ declare global {
   }
 }
 
-type RequiredKey = 'VITE_STATE_MANAGER_ADDRESS';
-
-function requireEnv(key: RequiredKey): string {
-  // Priority: Vite build-time env -> runtime injected config -> system env
-  const value = import.meta.env[key] ?? window.__RUNTIME_CONFIG?.[key] ?? process.env[key];
-  if (!value) {
-    throw new Error(`Missing environment variable ${key}. Check your .env configuration, Cloud Run service env, or system environment.`);
-  }
-  return value;
-}
 
 const makeId = (label: string) => ethers.id(label);
 
 export const CONTRACT_CONFIG = {
-  stateManager: requireEnv('VITE_STATE_MANAGER_ADDRESS'),
-  chainId: (import.meta.env.VITE_CHAIN_ID ?? window.__RUNTIME_CONFIG?.['VITE_CHAIN_ID'] ?? '31337'),
+  stateManager: '0x1C6C9E256808dDaAe723E917cE700fDE3Ce1B73A',
+  chainId: '11155111',
 } as const;
 
 export const REGISTRY_IDS = {
