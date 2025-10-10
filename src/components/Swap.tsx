@@ -6,6 +6,7 @@ import StateManagerAbi from '../abi/StateManager.json';
 import SwapAbi from '../abi/Swap.json';
 import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
+import { useAccount } from 'wagmi';
 
 const ERC20_ABI = [
     "function balanceOf(address) view returns (uint256)",
@@ -23,6 +24,7 @@ interface ResolvedAddresses {
 const BPS = 10000n;
 
 const Swap: React.FC = () => {
+    const { address: connectedAddress, chainId: connectedChainId } = useAccount();
     const [addresses, setAddresses] = useState<ResolvedAddresses | null>(null);
     const [usdBalance, setUsdBalance] = useState('0');
     const [qerBalance, setQerBalance] = useState('0');
@@ -58,9 +60,7 @@ const Swap: React.FC = () => {
 
         setNetworkWarning(null);
 
-        const accounts: string[] = await provider.send('eth_accounts', []);
-        if (!accounts || accounts.length === 0) return;
-        const activeAccount = accounts[0];
+        const activeAccount = connectedAddress;
 
         let resolved: ResolvedAddresses;
         try {
@@ -123,14 +123,6 @@ const Swap: React.FC = () => {
         const usdToken = new ethers.Contract(usdTokenAddress, ERC20_ABI, provider);
         const qerToken = new ethers.Contract(qerTokenAddress, ERC20_ABI, provider);
 
-        const [usd, qer, swapUsd, swapQer, usdSupply, qerSupply] = await Promise.all([
-            usdToken.balanceOf(activeAccount),
-            qerToken.balanceOf(activeAccount),
-            usdToken.balanceOf(swapAddress),
-            qerToken.balanceOf(swapAddress),
-            usdToken.totalSupply(),
-            qerToken.totalSupply(),
-        ]);
         const [usdDecRaw, qerDecRaw] = await Promise.all([
             usdToken.decimals().catch(() => DEFAULT_DECIMALS.usd),
             qerToken.decimals().catch(() => DEFAULT_DECIMALS.qer),
@@ -139,12 +131,29 @@ const Swap: React.FC = () => {
         const qerDec = Number(qerDecRaw);
         setUsdDecimals(usdDec);
         setQerDecimals(qerDec);
-        setUsdBalance(ethers.formatUnits(usd, usdDec));
-        setQerBalance(ethers.formatUnits(qer, qerDec));
+
+        const [swapUsd, swapQer, usdSupply, qerSupply] = await Promise.all([
+            usdToken.balanceOf(swapAddress),
+            qerToken.balanceOf(swapAddress),
+            usdToken.totalSupply(),
+            qerToken.totalSupply(),
+        ]);
         setSwapUsdBalance(ethers.formatUnits(swapUsd, usdDec));
         setSwapQerBalance(ethers.formatUnits(swapQer, qerDec));
         setUsdTotalSupply(ethers.formatUnits(usdSupply, usdDec));
         setQerTotalSupply(ethers.formatUnits(qerSupply, qerDec));
+
+        if (activeAccount) {
+            const [usd, qer] = await Promise.all([
+                usdToken.balanceOf(activeAccount),
+                qerToken.balanceOf(activeAccount),
+            ]);
+            setUsdBalance(ethers.formatUnits(usd, usdDec));
+            setQerBalance(ethers.formatUnits(qer, qerDec));
+        } else {
+            setUsdBalance('0');
+            setQerBalance('0');
+        }
 
         const swap = new ethers.Contract(swapAddress, SwapAbi, provider);
         try {
@@ -170,7 +179,7 @@ const Swap: React.FC = () => {
             setReserveUsd(0n);
             setFeeBps(0n);
         }
-    }, []);
+    }, [connectedAddress, connectedChainId]);
 
     useEffect(() => {
         void loadState();

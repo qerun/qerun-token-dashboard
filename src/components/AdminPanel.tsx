@@ -4,6 +4,7 @@ import styles from '../styles/qerunTheme.module.css';
 import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
+import { useAccount } from 'wagmi';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -11,6 +12,7 @@ const ERC20_ABI = [
 ];
 
 const AdminPanel: React.FC = () => {
+  const { address: activeAccount, isConnected } = useAccount();
   const [swapAddress, setSwapAddress] = useState<string | null>(null);
   const [defaultQuote, setDefaultQuote] = useState<string | null>(null);
   const [currentPairs, setCurrentPairs] = useState<string[]>([]);
@@ -27,28 +29,25 @@ const AdminPanel: React.FC = () => {
   const hasWallet = useMemo(() => Boolean(window.ethereum), []);
 
   const checkAdminAccess = useCallback(async () => {
-    if (!window.ethereum) {
+    if (!window.ethereum || !activeAccount || !isConnected) {
       setHasAdminAccess(false);
       return;
     }
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const userAddress = await signer.getAddress();
-
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
 
       // Check if user is the owner/admin of the StateManager contract
       const owner = await stateManager.owner();
-      const isOwner = owner.toLowerCase() === userAddress.toLowerCase();
+      const isOwner = owner.toLowerCase() === activeAccount.toLowerCase();
 
       setHasAdminAccess(isOwner);
     } catch (err) {
       console.error('Failed to check admin access:', err);
       setHasAdminAccess(false);
     }
-  }, []);
+  }, [activeAccount, isConnected]);
 
   const normaliseAddress = (value: string) => {
     try {
