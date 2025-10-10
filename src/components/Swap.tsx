@@ -240,6 +240,7 @@ const Swap: React.FC = () => {
     };
 
     const [amount, setAmount] = useState('');
+    const [isSwapping, setIsSwapping] = useState(false);
 
     // Check if user has sufficient balance for the swap
     const hasInsufficientBalance = useMemo(() => {
@@ -252,7 +253,10 @@ const Swap: React.FC = () => {
         return userBalance < swapAmount;
     }, [amount, fromToken, usdBalance, qerBalance]);
 
-    const handleSwap = async (_e: React.FormEvent) => {
+    const handleSwap = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isSwapping) return;
         if (!window.ethereum) {
             alert('No wallet found');
             return;
@@ -263,6 +267,7 @@ const Swap: React.FC = () => {
         }
 
         try {
+            setIsSwapping(true);
             if (!addresses) {
                 alert('Contract addresses not loaded yet');
                 return;
@@ -278,23 +283,29 @@ const Swap: React.FC = () => {
 
             if (fromToken === 'USD') {
                 const usdToken = new ethers.Contract(usdTokenAddress, ERC20_ABI, signer);
-                await usdToken.approve(swapAddress, amountIn);
-                await contract.swapQuoteForQer(usdTokenAddress, amountIn, minAmountOut);
+                const approveTx = await usdToken.approve(swapAddress, amountIn);
+                await approveTx.wait?.();
+                const swapTx = await contract.swapQuoteForQer(usdTokenAddress, amountIn, minAmountOut);
+                await swapTx.wait?.();
             } else if (fromToken === 'QER') {
                 const qerToken = new ethers.Contract(qerTokenAddress, ERC20_ABI, signer);
-                await qerToken.approve(swapAddress, amountIn);
-                await contract.swapQerForQuote(usdTokenAddress, amountIn, minAmountOut);
+                const approveTx = await qerToken.approve(swapAddress, amountIn);
+                await approveTx.wait?.();
+                const swapTx = await contract.swapQerForQuote(usdTokenAddress, amountIn, minAmountOut);
+                await swapTx.wait?.();
             } else {
                 alert('Invalid token pair');
                 return;
             }
 
-            alert('Swap transaction sent!');
+            alert('Swap confirmed on-chain. Balances updated.');
             setAmount('');
             await loadState();
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             alert('Swap failed: ' + message);
+        } finally {
+            setIsSwapping(false);
         }
     };
 
@@ -389,10 +400,10 @@ const Swap: React.FC = () => {
                     </div>
                     <button
                         type="submit"
-                        disabled={!amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
+                        disabled={isSwapping || !amount || parseFloat(amount) <= 0 || hasInsufficientBalance}
                         className={styles.qerunSwapButton}
                     >
-                        {hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
+                        {isSwapping ? 'Swapping...' : hasInsufficientBalance ? 'Insufficient Balance' : 'Swap now'}
                     </button>
                     
                     {hasInsufficientBalance && (
