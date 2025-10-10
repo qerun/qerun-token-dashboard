@@ -84,8 +84,12 @@ function App() {
         }}
       >
         <Logo />
-        <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+        <Container maxWidth={false} disableGutters sx={{ py: { xs: 4, md: 8 } }}>
           <Box sx={{
+            width: { xs: '100vw', md: 'auto' },
+            maxWidth: { xs: '100%', md: 1200 },
+            mx: 'auto',
+            px: { xs: 2, md: 0 },
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
             gap: 4,
@@ -97,6 +101,9 @@ function App() {
             <Box>
               <Paper elevation={0} sx={{ p: 3, borderRadius: 'var(--qerun-radius-xl)', border: '1px solid var(--qerun-gold-alpha-25)', backdropFilter: 'blur(10px)', background: 'var(--qerun-card)' }}>
                 <Stack spacing={2}>
+                  <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
+                    <Connect />
+                  </Box>
                   <Typography variant="h5" sx={{ color: 'var(--qerun-gold)', fontWeight: 700 }}>Network & Status</Typography>
                   <Metrics {...metrics} />
                   <NetworkManager onAfterSwitch={() => setRefreshKey((v) => v + 1)} />
@@ -109,7 +116,8 @@ function App() {
             <AdminPanel />
           </Box>
 
-          <Box sx={{ position: 'fixed', right: 20, bottom: 20 }}>
+          {/* Floating connect button only on desktop/tablet to avoid overlap on mobile */}
+          <Box sx={{ display: { xs: 'none', md: 'block' }, position: 'fixed', right: 20, bottom: 20 }}>
             <Connect />
           </Box>
         </Container>

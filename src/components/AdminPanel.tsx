@@ -277,7 +277,15 @@ const AdminPanel: React.FC = () => {
         ) : (
           <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
             {currentPairs.map((address) => (
-              <Box component="li" key={address}><code>{address}</code></Box>
+              <Box component="li" key={address} sx={{
+                '& code': {
+                  wordBreak: 'break-all',
+                  whiteSpace: 'normal',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                }
+              }}>
+                <code>{address}</code>
+              </Box>
             ))}
           </Stack>
         )}
@@ -288,7 +296,13 @@ const AdminPanel: React.FC = () => {
           <Typography variant="subtitle2">StateManager Registry:</Typography>
           <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
             {configEntries.map((entry) => (
-              <Box component="li" key={entry.label}>
+              <Box component="li" key={entry.label} sx={{
+                '& code': {
+                  wordBreak: 'break-all',
+                  whiteSpace: 'normal',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                }
+              }}>
                 <b>{entry.label}:</b> <code>{entry.value}</code>
               </Box>
             ))}
