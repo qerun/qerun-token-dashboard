@@ -1,4 +1,5 @@
 // Simple production server for the dashboard (Vite build)
+import 'dotenv/config'
 import express from 'express'
 import path from 'path'
 import fs from 'fs'
@@ -25,6 +26,12 @@ function getRuntimeConfig() {
     Object.entries(cfg).filter(([_, v]) => v !== undefined && v !== null)
   )
 }
+
+// Simple endpoint to inspect runtime config
+app.get('/config', (_req, res) => {
+  const runtimeConfig = getRuntimeConfig()
+  res.json({ runtimeConfig })
+})
 
 // SPA fallback with runtime config injection
 app.get('*', (_req, res) => {
