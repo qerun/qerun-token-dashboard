@@ -59,14 +59,7 @@ const Connect: React.FC = () => {
                     color="secondary"
                     variant="outlined"
                     size="large"
-                    onClick={() => {
-                      // Open WalletConnect QR modal directly
-                      if (window?.rainbowkit) {
-                        window.rainbowkit.openWalletConnectModal?.();
-                      } else {
-                        openConnectModal(); // fallback to default modal
-                      }
-                    }}
+                    onClick={openConnectModal}
                     sx={{
                       borderRadius: 'var(--qerun-radius-xl, 16px)',
                       minHeight: 48,
