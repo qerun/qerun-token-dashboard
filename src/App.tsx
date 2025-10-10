@@ -113,7 +113,8 @@ function App() {
             <AdminPanel />
           </Box>
 
-          <Box sx={{ position: 'fixed', right: 20, bottom: 20 }}>
+          {/* Floating connect button only on desktop/tablet to avoid overlap on mobile */}
+          <Box sx={{ display: { xs: 'none', md: 'block' }, position: 'fixed', right: 20, bottom: 20 }}>
             <Connect />
           </Box>
         </Container>
