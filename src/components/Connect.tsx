@@ -27,32 +27,34 @@ const Connect: React.FC = () => {
             >
               <Stack spacing={2} direction="column" alignItems="center">
                 <Tooltip title="Tap to connect your wallet. If you don't have a wallet app, try MetaMask or Trust Wallet. For mobile, WalletConnect QR is supported." arrow>
-                  <Button
-                    color="primary"
-                    variant="contained"
-                    size="large"
-                    startIcon={<AccountBalanceWalletIcon />}
-                    disabled={!ready}
-                    onClick={() => {
-                      if (!connected) {
-                        openConnectModal();
-                      } else if (unsupported) {
-                        openChainModal();
-                      } else {
-                        openAccountModal();
-                      }
-                    }}
-                    sx={{
-                      background: 'var(--qerun-button-bg)',
-                      color: 'var(--qerun-button-text)',
-                      borderRadius: 'var(--qerun-radius-xl, 16px)',
-                      minHeight: 56,
-                      fontSize: '1.1rem',
-                      px: 3,
-                    }}
-                  >
-                    {buttonLabel}
-                  </Button>
+                  <span>
+                    <Button
+                      color="primary"
+                      variant="contained"
+                      size="large"
+                      startIcon={<AccountBalanceWalletIcon />}
+                      disabled={!ready}
+                      onClick={() => {
+                        if (!connected) {
+                          openConnectModal();
+                        } else if (unsupported) {
+                          openChainModal();
+                        } else {
+                          openAccountModal();
+                        }
+                      }}
+                      sx={{
+                        background: 'var(--qerun-button-bg)',
+                        color: 'var(--qerun-button-text)',
+                        borderRadius: 'var(--qerun-radius-xl, 16px)',
+                        minHeight: 56,
+                        fontSize: '1.1rem',
+                        px: 3,
+                      }}
+                    >
+                      {buttonLabel}
+                    </Button>
+                  </span>
                 </Tooltip>
                 {!connected && (
                   <Button
