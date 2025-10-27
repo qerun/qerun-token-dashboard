@@ -10,8 +10,8 @@ declare global {
 const makeId = (label: string) => ethers.id(label);
 
 export const CONTRACT_CONFIG = {
-  stateManager: '0x1C6C9E256808dDaAe723E917cE700fDE3Ce1B73A',
-  chainId: '11155111',
+  stateManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+  chainId: '31337',
 } as const;
 
 export const REGISTRY_IDS = {

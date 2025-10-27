@@ -3,6 +3,14 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button, Typography, Box, Tooltip, Stack } from '@mui/material';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
+declare global {
+  interface Window {
+    rainbowkit?: {
+      openWalletConnectModal?: () => void;
+    };
+  }
+}
+
 const Connect: React.FC = () => {
   return (
     <Box>

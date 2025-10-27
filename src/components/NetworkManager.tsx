@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Stack } from '@mui/material';
-import { addTokenToWallet, switchToSepolia } from '../utils/wallet';
+import { addTokenToWallet, switchToLocalhost } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
 
 type Props = {
@@ -19,7 +19,7 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
   };
 
   const handleSwitchNetwork = async () => {
-    await switchToSepolia();
+    await switchToLocalhost();
     onAfterSwitch?.();
   };
 

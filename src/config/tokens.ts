@@ -1,12 +1,12 @@
 export const TOKENS = {
   QER: {
-    address: '0xAF022142A86034d9189ab1A4fb8389057CB4eDc2',
+    address: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
     symbol: 'QER',
     decimals: 18,
     image: undefined, // Add your token logo URL here
   },
   USDQ: {
-    address: '0x161B35FBd6FBb27C1E3342B14435140e42BF2E2b',
+    address: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
     symbol: 'USDQ',
     decimals: 18,
     image: undefined, // Add your token logo URL here

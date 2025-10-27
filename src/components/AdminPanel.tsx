@@ -36,13 +36,12 @@ const AdminPanel: React.FC = () => {
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
 
-      // Check if user is the owner/admin of the StateManager contract
-      const owner = await stateManager.owner();
-      const isOwner = owner.toLowerCase() === activeAccount.toLowerCase();
-
-      setHasAdminAccess(isOwner);
+      // Check if user has the DEFAULT_ADMIN_ROLE
+      const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+      const hasAdminRole = await stateManager.hasRole(DEFAULT_ADMIN_ROLE, activeAccount);
+      setHasAdminAccess(hasAdminRole);
     } catch (err) {
       console.error('Failed to check admin access:', err);
       setHasAdminAccess(false);
@@ -65,7 +64,7 @@ const AdminPanel: React.FC = () => {
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
       const getAddress = stateManager.getFunction('getAddress(bytes32)');
       const hasEntry = (() => {
         try {
@@ -120,7 +119,7 @@ const AdminPanel: React.FC = () => {
         setTreasuryQerBalance(null);
       }
 
-      const contract = new ethers.Contract(swapAddr, SwapAbi, provider);
+      const contract = new ethers.Contract(swapAddr, SwapAbi.abi, provider);
       const pairs: string[] = await contract.allPairs();
       const normalised = pairs.map(addr => ethers.getAddress(addr));
       setCurrentPairs(normalised);
@@ -197,7 +196,7 @@ const AdminPanel: React.FC = () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(swapAddress, SwapAbi, signer);
+      const contract = new ethers.Contract(swapAddress, SwapAbi.abi, signer);
       const tx = await contract.updatePairs(draftPairs);
       await tx.wait();
       setStatus('Pairs updated successfully.');

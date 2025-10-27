@@ -32,17 +32,17 @@ export async function addTokenToWallet(token: TokenInfo): Promise<boolean> {
   }
 }
 
-export async function switchToSepolia(): Promise<void> {
+export async function switchToLocalhost(): Promise<void> {
   if (!window.ethereum) {
     alert('Please install MetaMask or a compatible wallet!')
     return
   }
 
   try {
-    // Try to switch to Sepolia
+    // Try to switch to localhost
     await (window.ethereum as any).request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: '0xaa36a7' }],
+      params: [{ chainId: '0x7a69' }], // 31337 in hex
     })
   } catch (switchError: any) {
     // If network doesn't exist, add it
@@ -51,20 +51,20 @@ export async function switchToSepolia(): Promise<void> {
         await (window.ethereum as any).request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: '0xaa36a7',
-            chainName: 'Sepolia test network',
-            nativeCurrency: { name: 'SepoliaETH', symbol: 'SepoliaETH', decimals: 18 },
-            rpcUrls: ['https://eth-sepolia.g.alchemy.com/v2/demo'],
-            blockExplorerUrls: ['https://sepolia.etherscan.io/']
+            chainId: '0x7a69',
+            chainName: 'Hardhat Localhost',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['http://127.0.0.1:8545'],
+            blockExplorerUrls: []
           }]
         })
       } catch (addError) {
-        console.error('Failed to add network:', addError)
-        alert('Failed to add Sepolia network to wallet')
+        console.error('Error adding localhost network:', addError)
+        alert('Failed to add localhost network to wallet')
       }
     } else {
-      console.error('Failed to switch network:', switchError)
-      alert('Failed to switch to Sepolia network')
+      console.error('Error switching to localhost:', switchError)
+      alert('Failed to switch to localhost network')
     }
   }
 }

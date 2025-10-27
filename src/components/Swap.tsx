@@ -84,7 +84,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
 
         let resolved: ResolvedAddresses;
         try {
-            const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi, provider);
+            const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
             const getAddress = stateManager.getFunction('getAddress');
             const hasEntry = (() => {
                 try {
@@ -176,7 +176,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             setQerBalance('0');
         }
 
-        const swap = new ethers.Contract(swapAddress, SwapAbi, provider);
+        const swap = new ethers.Contract(swapAddress, SwapAbi.abi, provider);
         let nextRate = 'N/A';
         try {
             const [reserveQerRaw, reserveUsdRaw]: [bigint, bigint] = await swap.getReserves(usdTokenAddress);
@@ -286,7 +286,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             const { swap: swapAddress, usd: usdTokenAddress, qer: qerTokenAddress } = addresses;
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
-            const contract = new ethers.Contract(swapAddress, SwapAbi, signer);
+            const contract = new ethers.Contract(swapAddress, SwapAbi.abi, signer);
             const fromDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
             const amountIn = ethers.parseUnits(amount, fromDecimals);
             const expectedOut = estimateAmountOut(amountIn, fromToken);
