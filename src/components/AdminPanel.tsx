@@ -116,20 +116,25 @@ const AdminPanel: React.FC = () => {
           const valueType = metadata[0];
 
           let value: string;
+          const getAddress = stateManager.getFunction('getAddress(bytes32)');
+          const getUint = stateManager.getFunction('getUint(bytes32)');
+          const getBool = stateManager.getFunction('getBool(bytes32)');
+          const getBytes32 = stateManager.getFunction('getBytes32(bytes32)');
+
           switch (valueType) {
             case 1: // ADDRESS
-              value = await stateManager.getAddress(id);
+              value = await getAddress(id);
               break;
             case 2: // UINT256
-              const uintValue = await stateManager.getUint(id);
+              const uintValue = await getUint(id);
               value = uintValue.toString();
               break;
             case 3: // BOOL
-              const boolValue = await stateManager.getBool(id);
+              const boolValue = await getBool(id);
               value = boolValue ? 'true' : 'false';
               break;
             case 4: // BYTES32
-              const bytesValue = await stateManager.getBytes32(id);
+              const bytesValue = await getBytes32(id);
               value = bytesValue;
               break;
             default:
