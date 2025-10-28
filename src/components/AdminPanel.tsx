@@ -22,7 +22,13 @@ const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [treasuryAddress, setTreasuryAddress] = useState<string | null>(null);
   const [treasuryQerBalance, setTreasuryQerBalance] = useState<string | null>(null);
+  const [treasuryUsdBalance, setTreasuryUsdBalance] = useState<string | null>(null);
   const [qerTokenAddress, setQerTokenAddress] = useState<string | null>(null);
+  const [govTargetAddress, setGovTargetAddress] = useState('');
+  const [govOperation, setGovOperation] = useState('');
+  const [govModuleAddress, setGovModuleAddress] = useState('');
+  const [govStatus, setGovStatus] = useState<string | null>(null);
+  const [govLoading, setGovLoading] = useState(false);
   const [configEntries, setConfigEntries] = useState<Array<{ id: string; label: string; value: string }>>([]);
   const [hasAdminAccess, setHasAdminAccess] = useState<boolean>(false);
 
@@ -99,11 +105,52 @@ const AdminPanel: React.FC = () => {
       const appendEntry = (label: string, value: string) => {
         entries.push({ id: label, label, value });
       };
-      appendEntry('QER Token', qerAddr);
-      appendEntry('Treasury', treasuryAddr);
-      appendEntry('Primary Quote', quoteAddr);
-      appendEntry('Swap', swapAddr);
-      appendEntry('Swap Fee (bps)', (await stateManager.getUint(REGISTRY_IDS.SWAP_FEE_BPS)).toString());
+
+      // Load all known registry entries
+      const loadRegistryEntry = async (id: string, label: string) => {
+        try {
+          const has = await stateManager.has(id);
+          if (!has) return;
+
+          const metadata = await stateManager.getMetadata(id);
+          const valueType = metadata[0];
+
+          let value: string;
+          switch (valueType) {
+            case 1: // ADDRESS
+              value = await stateManager.getAddress(id);
+              break;
+            case 2: // UINT256
+              const uintValue = await stateManager.getUint(id);
+              value = uintValue.toString();
+              break;
+            case 3: // BOOL
+              const boolValue = await stateManager.getBool(id);
+              value = boolValue ? 'true' : 'false';
+              break;
+            case 4: // BYTES32
+              const bytesValue = await stateManager.getBytes32(id);
+              value = bytesValue;
+              break;
+            default:
+              value = 'Unknown type';
+          }
+          appendEntry(label, value);
+        } catch (err) {
+          console.warn(`Failed to load registry entry ${label}:`, err);
+        }
+      };
+
+      // Load all known registry entries
+      await Promise.all([
+        loadRegistryEntry(REGISTRY_IDS.MAIN_CONTRACT, 'QER Token'),
+        loadRegistryEntry(REGISTRY_IDS.TREASURY, 'Treasury'),
+        loadRegistryEntry(REGISTRY_IDS.PRIMARY_QUOTE, 'Primary Quote'),
+        loadRegistryEntry(REGISTRY_IDS.SWAP_CONTRACT, 'Swap'),
+        loadRegistryEntry(REGISTRY_IDS.SWAP_FEE_BPS, 'Swap Fee (bps)'),
+        loadRegistryEntry(REGISTRY_IDS.TREASURY_APPLY_GOVERNANCE, 'Treasury Apply Governance'),
+      ]);
+
       setConfigEntries(entries);
 
       setSwapAddress(swapAddr);
@@ -119,6 +166,14 @@ const AdminPanel: React.FC = () => {
         setTreasuryQerBalance(null);
       }
 
+      try {
+        const usdToken = new ethers.Contract(quoteAddr, ERC20_ABI, provider);
+        const balance = await usdToken.balanceOf(treasuryAddr);
+        setTreasuryUsdBalance(ethers.formatUnits(balance, 6)); // USD token has 6 decimals
+      } catch {
+        setTreasuryUsdBalance(null);
+      }
+
       const contract = new ethers.Contract(swapAddr, SwapAbi.abi, provider);
       const pairs: string[] = await contract.allPairs();
       const normalised = pairs.map(addr => ethers.getAddress(addr));
@@ -131,6 +186,7 @@ const AdminPanel: React.FC = () => {
       setConfigEntries([]);
       setTreasuryAddress(null);
       setTreasuryQerBalance(null);
+      setTreasuryUsdBalance(null);
       setQerTokenAddress(null);
       setSwapAddress(null);
       setDefaultQuote(null);
@@ -177,33 +233,74 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleSetGovernanceModule = async () => {
+    if (!window.ethereum) {
+      setGovStatus('Connect a wallet with admin access to set governance modules.');
+      return;
+    }
+    if (!govTargetAddress || !govModuleAddress) {
+      setGovStatus('Target address and governance module address are required.');
+      return;
+    }
+
+    const targetNormalised = normaliseAddress(govTargetAddress);
+    const moduleNormalised = normaliseAddress(govModuleAddress);
+    if (!targetNormalised || !moduleNormalised) {
+      setGovStatus('Invalid Ethereum addresses provided.');
+      return;
+    }
+
+    setGovLoading(true);
+    setGovStatus('Submitting governance module transaction...');
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, signer);
+
+      let tx;
+      if (govOperation.trim()) {
+        // Set governance module for specific operation
+        const operationBytes32 = ethers.isHexString(govOperation) && govOperation.length === 66
+          ? govOperation
+          : ethers.id(govOperation);
+        tx = await stateManager.setGovernanceModuleForOperation(targetNormalised, operationBytes32, moduleNormalised);
+      } else {
+        // Set global governance module for target
+        tx = await stateManager.setGovernanceModule(targetNormalised, moduleNormalised);
+      }
+
+      await tx.wait();
+      setGovStatus('Governance module set successfully.');
+      setGovTargetAddress('');
+      setGovOperation('');
+      setGovModuleAddress('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setGovStatus(`Failed to set governance module: ${message}`);
+    } finally {
+      setGovLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!window.ethereum) {
       setStatus('Connect a wallet with admin access to update pairs.');
       return;
     }
-    if (draftPairs.length === 0) {
-      setStatus('At least one quote token address is required.');
-      return;
-    }
-    if (!swapAddress) {
-      setStatus('Swap contract address not available yet.');
-      return;
-    }
 
     setLoading(true);
-    setStatus('Submitting transaction...');
+    setStatus('Submitting pair update transaction...');
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(swapAddress, SwapAbi.abi, signer);
+      const contract = new ethers.Contract(swapAddress!, SwapAbi.abi, signer);
       const tx = await contract.updatePairs(draftPairs);
       await tx.wait();
-      setStatus('Pairs updated successfully.');
       setCurrentPairs(draftPairs);
+      setStatus('Pairs updated successfully.');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setStatus(`Update failed: ${message}`);
+      setStatus(`Failed to update pairs: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -225,6 +322,7 @@ const AdminPanel: React.FC = () => {
           <Typography variant="body2"><b>Treasury:</b> {treasuryAddress}</Typography>
           <Typography variant="body2"><b>QER Token:</b> {qerTokenAddress}</Typography>
           <Typography variant="body2"><b>Treasury QER Balance:</b> {treasuryQerBalance ?? '—'}</Typography>
+          <Typography variant="body2"><b>Treasury USD Balance:</b> {treasuryUsdBalance ?? '—'}</Typography>
         </Box>
       )}
 
@@ -308,6 +406,54 @@ const AdminPanel: React.FC = () => {
           </Stack>
         </Box>
       )}
+
+      <Box sx={{ mt: 3, p: 2, borderRadius: 2, border: '1px solid var(--qerun-gold-alpha-18)' }}>
+        <Typography variant="h6" sx={{ color: 'var(--qerun-gold)', fontWeight: 600, mb: 2 }}>Governance Module Configuration</Typography>
+        <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)', mb: 2 }}>
+          Configure governance modules for contracts. Leave operation empty for global governance, or specify an operation ID for operation-specific governance.
+        </Typography>
+
+        <Stack spacing={2}>
+          <TextField
+            fullWidth
+            label="Target Contract Address"
+            placeholder="0x..."
+            value={govTargetAddress}
+            onChange={(e) => setGovTargetAddress(e.target.value)}
+            helperText="The contract address to apply governance to"
+          />
+          <TextField
+            fullWidth
+            label="Operation ID (optional)"
+            placeholder="swap, transfer, etc. or 0x..."
+            value={govOperation}
+            onChange={(e) => setGovOperation(e.target.value)}
+            helperText="Leave empty for global governance, or specify operation (will be hashed to bytes32)"
+          />
+          <TextField
+            fullWidth
+            label="Governance Module Address"
+            placeholder="0x..."
+            value={govModuleAddress}
+            onChange={(e) => setGovModuleAddress(e.target.value)}
+            helperText="The governance module contract address"
+          />
+          <Button
+            variant="contained"
+            onClick={handleSetGovernanceModule}
+            disabled={govLoading || !govTargetAddress || !govModuleAddress}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            {govLoading ? 'Setting...' : 'Set Governance Module'}
+          </Button>
+        </Stack>
+
+        {govStatus && (
+          <Alert sx={{ mt: 2 }} severity={govStatus.includes('Failed') ? 'error' : 'success'}>
+            {govStatus}
+          </Alert>
+        )}
+      </Box>
     </Paper>
   );
 };

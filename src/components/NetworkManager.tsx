@@ -19,7 +19,11 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
   };
 
   const handleSwitchNetwork = async () => {
-    await switchToLocalhost();
+    try {
+      await switchToLocalhost();
+    } catch (error) {
+      console.error('Failed to switch network:', error);
+    }
     onAfterSwitch?.();
   };
 
@@ -31,7 +35,7 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         onClick={handleSwitchNetwork}
         sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
       >
-        Switch to Sepolia
+        Switch to Localhost
       </Button>
       <Button
         color="primary"
