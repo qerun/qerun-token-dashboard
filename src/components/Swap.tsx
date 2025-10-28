@@ -341,6 +341,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             </Typography>
             <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)' }}>
               Choose the direction, enter an amount, and confirm with your wallet.
+              Price impact is calculated as used by the governance module.
             </Typography>
           </Box>
 
@@ -417,18 +418,22 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                   if (numAmount <= 0) return '0.00%';
                   const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
                   const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
-                  const outputAmount = estimateAmountOut(inputAmount, fromToken);
-                  let spotRate: number;
-                  let effectiveRate: number;
-                  if (fromToken === 'USD') {
-                    spotRate = Number(ethers.formatUnits(reserveQer, qerDecimals)) / Number(ethers.formatUnits(reserveUsd, usdDecimals));
-                    effectiveRate = Number(ethers.formatUnits(outputAmount, qerDecimals)) / numAmount;
+                  
+                  // Contract-style price impact calculation: (amountIn * BPS) / (reserve + amountIn)
+                  const BPS = 10000n;
+                  let impact: number;
+                  if (fromToken === 'QER') {
+                    // QER->USD swap: impact = (qerAmount * BPS) / (qerReserve + qerAmount)
+                    impact = Number((inputAmount * BPS) / (reserveQer + inputAmount));
                   } else {
-                    spotRate = Number(ethers.formatUnits(reserveUsd, usdDecimals)) / Number(ethers.formatUnits(reserveQer, qerDecimals));
-                    effectiveRate = Number(ethers.formatUnits(outputAmount, usdDecimals)) / numAmount;
+                    // USD->QER swap: impact = (usdAmount * BPS) / (usdReserve + usdAmount)
+                    impact = Number((inputAmount * BPS) / (reserveUsd + inputAmount));
                   }
-                  const impact = ((spotRate - effectiveRate) / spotRate) * 100;
-                  return impact.toFixed(2) + '%';
+                  
+                  const impactPercent = impact / 100;
+                  const willBeBlocked = fromToken === 'QER' && impactPercent > 0.5;
+                  
+                  return impactPercent.toFixed(2) + '% ' + (willBeBlocked ? '(BLOCKED by governance)' : '');
                 })()}
               </Box>
             )}
