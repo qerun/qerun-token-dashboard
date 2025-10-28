@@ -5,6 +5,7 @@ import SwapAbi from '../abi/Swap.json';
 import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
 import { useAccount } from 'wagmi';
+import RegistryManager from './RegistryManager';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -29,7 +30,6 @@ const AdminPanel: React.FC = () => {
   const [govModuleAddress, setGovModuleAddress] = useState('');
   const [govStatus, setGovStatus] = useState<string | null>(null);
   const [govLoading, setGovLoading] = useState(false);
-  const [configEntries, setConfigEntries] = useState<Array<{ id: string; label: string; value: string }>>([]);
   const [hasAdminAccess, setHasAdminAccess] = useState<boolean>(false);
 
   const hasWallet = useMemo(() => Boolean(window.ethereum), []);
@@ -101,63 +101,6 @@ const AdminPanel: React.FC = () => {
       const qerAddr = await requireAddress(REGISTRY_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
       const treasuryAddr = await requireAddress(REGISTRY_IDS.TREASURY, 'StateManager missing treasury address');
 
-      const entries: Array<{ id: string; label: string; value: string }> = [];
-      const appendEntry = (label: string, value: string) => {
-        entries.push({ id: label, label, value });
-      };
-
-      // Load all known registry entries
-      const loadRegistryEntry = async (id: string, label: string) => {
-        try {
-          const has = await stateManager.has(id);
-          if (!has) return;
-
-          const metadata = await stateManager.getMetadata(id);
-          const valueType = metadata[0];
-
-          let value: string;
-          const getAddress = stateManager.getFunction('getAddress(bytes32)');
-          const getUint = stateManager.getFunction('getUint(bytes32)');
-          const getBool = stateManager.getFunction('getBool(bytes32)');
-          const getBytes32 = stateManager.getFunction('getBytes32(bytes32)');
-
-          switch (valueType) {
-            case 1: // ADDRESS
-              value = await getAddress(id);
-              break;
-            case 2: // UINT256
-              const uintValue = await getUint(id);
-              value = uintValue.toString();
-              break;
-            case 3: // BOOL
-              const boolValue = await getBool(id);
-              value = boolValue ? 'true' : 'false';
-              break;
-            case 4: // BYTES32
-              const bytesValue = await getBytes32(id);
-              value = bytesValue;
-              break;
-            default:
-              value = 'Unknown type';
-          }
-          appendEntry(label, value);
-        } catch (err) {
-          console.warn(`Failed to load registry entry ${label}:`, err);
-        }
-      };
-
-      // Load all known registry entries
-      await Promise.all([
-        loadRegistryEntry(REGISTRY_IDS.MAIN_CONTRACT, 'QER Token'),
-        loadRegistryEntry(REGISTRY_IDS.TREASURY, 'Treasury'),
-        loadRegistryEntry(REGISTRY_IDS.PRIMARY_QUOTE, 'Primary Quote'),
-        loadRegistryEntry(REGISTRY_IDS.SWAP_CONTRACT, 'Swap'),
-        loadRegistryEntry(REGISTRY_IDS.SWAP_FEE_BPS, 'Swap Fee (bps)'),
-        loadRegistryEntry(REGISTRY_IDS.TREASURY_APPLY_GOVERNANCE, 'Treasury Apply Governance'),
-      ]);
-
-      setConfigEntries(entries);
-
       setSwapAddress(swapAddr);
       setDefaultQuote(quoteAddr);
       setQerTokenAddress(qerAddr);
@@ -188,7 +131,6 @@ const AdminPanel: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to load pairs: ${message}`);
-      setConfigEntries([]);
       setTreasuryAddress(null);
       setTreasuryQerBalance(null);
       setTreasuryUsdBalance(null);
@@ -393,24 +335,9 @@ const AdminPanel: React.FC = () => {
         )}
       </Box>
 
-      {configEntries.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2">StateManager Registry:</Typography>
-          <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
-            {configEntries.map((entry) => (
-              <Box component="li" key={entry.label} sx={{
-                '& code': {
-                  wordBreak: 'break-all',
-                  whiteSpace: 'normal',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-                }
-              }}>
-                <b>{entry.label}:</b> <code>{entry.value}</code>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
-      )}
+      <Box sx={{ mt: 3 }}>
+        <RegistryManager hasWallet={hasWallet} />
+      </Box>
 
       <Box sx={{ mt: 3, p: 2, borderRadius: 2, border: '1px solid var(--qerun-gold-alpha-18)' }}>
         <Typography variant="h6" sx={{ color: 'var(--qerun-gold)', fontWeight: 600, mb: 2 }}>Governance Module Configuration</Typography>
