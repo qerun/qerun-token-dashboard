@@ -64,14 +64,14 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           const requiredRole = metadata[1];
 
           let value: string;
-          const getAddress = stateManager.getFunction('getAddress(bytes32)');
+          const addressOf = stateManager.getFunction('addressOf(string)');
           const getUint = stateManager.getFunction('getUint(bytes32)');
           const getBool = stateManager.getFunction('getBool(bytes32)');
           const getBytes32 = stateManager.getFunction('getBytes32(bytes32)');
 
           switch (valueType) {
             case 1: // ADDRESS
-              value = await getAddress(id);
+              value = await addressOf(id);
               break;
             case 2: // UINT256
               const uintValue = await getUint(id);

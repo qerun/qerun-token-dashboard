@@ -1,3 +1,4 @@
+import './runtime';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,7 +13,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 const walletConnectProjectId =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? 'd9f61ed66163e5f8c12e1c7d633792a6';
 
-const chainId = Number.parseInt(CONTRACT_CONFIG.chainId, 10);
+const chainId = CONTRACT_CONFIG.chainId ? Number.parseInt(CONTRACT_CONFIG.chainId, 10) : undefined;
 const fallbackRpcUrl = import.meta.env.VITE_CHAIN_RPC_URL ?? 'http://127.0.0.1:8545';
 const fallbackExplorerUrl = import.meta.env.VITE_CHAIN_EXPLORER_URL as string | undefined;
 

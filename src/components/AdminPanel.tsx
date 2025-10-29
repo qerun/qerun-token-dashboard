@@ -71,7 +71,7 @@ const AdminPanel: React.FC = () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
+  const addressOf = stateManager.getFunction('addressOf(string)');
       const hasEntry = (() => {
         try {
           return stateManager.getFunction('has(bytes32)');
@@ -90,7 +90,7 @@ const AdminPanel: React.FC = () => {
           }
         }
         try {
-          return await getAddress(id);
+          return await addressOf(id);
         } catch {
           throw new Error(label);
         }

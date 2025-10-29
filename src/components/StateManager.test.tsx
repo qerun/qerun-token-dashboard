@@ -29,8 +29,8 @@ vi.mock('ethers', () => ({
     Contract: vi.fn().mockImplementation(() => ({
       hasRole: vi.fn().mockResolvedValue(true),
       getFunction: vi.fn().mockImplementation((signature) => {
-        if (signature === 'getAddress(bytes32)') {
-          return vi.fn().mockImplementation((id) => {
+      if (signature === 'addressOf(string)') {
+        return vi.fn().mockImplementation((id) => {
             // Mock different addresses based on registry ID
             const addressMap: Record<string, string> = {
               [ethers.id('MAIN_CONTRACT')]: '0x1234567890123456789012345678901234567890',
@@ -112,8 +112,8 @@ describe('StateManager Value Fetching', () => {
       const provider = new ethers.ethers.BrowserProvider(window.ethereum);
       const stateManager = new ethers.ethers.Contract(CONTRACT_CONFIG.stateManager, [], provider);
 
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
-      const mainContractAddress = await getAddress(REGISTRY_IDS.MAIN_CONTRACT);
+  const addressOf = stateManager.getFunction('addressOf(string)');
+  const mainContractAddress = await addressOf(REGISTRY_IDS.MAIN_CONTRACT);
 
       expect(mainContractAddress).toBe('0x1234567890123456789012345678901234567890');
     });
@@ -125,8 +125,8 @@ describe('StateManager Value Fetching', () => {
       const provider = new ethers.ethers.BrowserProvider(window.ethereum);
       const stateManager = new ethers.ethers.Contract(CONTRACT_CONFIG.stateManager, [], provider);
 
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
-      const treasuryAddress = await getAddress(REGISTRY_IDS.TREASURY);
+  const addressOf = stateManager.getFunction('addressOf(string)');
+  const treasuryAddress = await addressOf(REGISTRY_IDS.TREASURY);
 
       expect(treasuryAddress).toBe('0x1234567890123456789012345678901234567891');
     });
@@ -138,8 +138,8 @@ describe('StateManager Value Fetching', () => {
       const provider = new ethers.ethers.BrowserProvider(window.ethereum);
       const stateManager = new ethers.ethers.Contract(CONTRACT_CONFIG.stateManager, [], provider);
 
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
-      const primaryQuoteAddress = await getAddress(REGISTRY_IDS.PRIMARY_QUOTE);
+  const addressOf = stateManager.getFunction('addressOf(string)');
+  const primaryQuoteAddress = await addressOf(REGISTRY_IDS.PRIMARY_QUOTE);
 
       expect(primaryQuoteAddress).toBe('0x1234567890123456789012345678901234567892');
     });
@@ -151,8 +151,8 @@ describe('StateManager Value Fetching', () => {
       const provider = new ethers.ethers.BrowserProvider(window.ethereum);
       const stateManager = new ethers.ethers.Contract(CONTRACT_CONFIG.stateManager, [], provider);
 
-      const getAddress = stateManager.getFunction('getAddress(bytes32)');
-      const swapContractAddress = await getAddress(REGISTRY_IDS.SWAP_CONTRACT);
+  const addressOf = stateManager.getFunction('addressOf(string)');
+  const swapContractAddress = await addressOf(REGISTRY_IDS.SWAP_CONTRACT);
 
       expect(swapContractAddress).toBe('0x1234567890123456789012345678901234567893');
     });
