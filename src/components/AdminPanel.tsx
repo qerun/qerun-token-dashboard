@@ -14,8 +14,6 @@ const ERC20_ABI = [
 
 const AdminPanel: React.FC = () => {
   const { address: activeAccount, isConnected } = useAccount();
-  const [swapAddress, setSwapAddress] = useState<string | null>(null);
-  const [defaultQuote, setDefaultQuote] = useState<string | null>(null);
   const [currentPairs, setCurrentPairs] = useState<string[]>([]);
   const [draftPairs, setDraftPairs] = useState<string[]>([]);
   const [inputAddress, setInputAddress] = useState('');
@@ -42,7 +40,7 @@ const AdminPanel: React.FC = () => {
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
 
       // Check if user has the DEFAULT_ADMIN_ROLE
       const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -70,7 +68,7 @@ const AdminPanel: React.FC = () => {
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     try {
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
   const addressOf = stateManager.getFunction('addressOf(string)');
       const hasEntry = (() => {
         try {
@@ -101,8 +99,6 @@ const AdminPanel: React.FC = () => {
       const qerAddr = await requireAddress(REGISTRY_IDS.MAIN_CONTRACT, 'StateManager missing QER token address');
       const treasuryAddr = await requireAddress(REGISTRY_IDS.TREASURY, 'StateManager missing treasury address');
 
-      setSwapAddress(swapAddr);
-      setDefaultQuote(quoteAddr);
       setQerTokenAddress(qerAddr);
       setTreasuryAddress(treasuryAddr);
 
@@ -135,8 +131,6 @@ const AdminPanel: React.FC = () => {
       setTreasuryQerBalance(null);
       setTreasuryUsdBalance(null);
       setQerTokenAddress(null);
-      setSwapAddress(null);
-      setDefaultQuote(null);
     }
   }, []);
 
@@ -172,11 +166,19 @@ const AdminPanel: React.FC = () => {
     setStatus(null);
   };
 
-  const handleIncludeDefault = () => {
-    const checksummed = normaliseAddress(defaultQuote ?? '');
-    if (!checksummed) return;
-    if (!draftPairs.includes(checksummed)) {
-      setDraftPairs(prev => [...prev, checksummed]);
+  const handleIncludeDefault = async () => {
+    if (!window.ethereum) return;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
+      const quoteAddr = await stateManager.addressOf(REGISTRY_IDS.PRIMARY_QUOTE);
+      const checksummed = normaliseAddress(quoteAddr);
+      if (!checksummed) return;
+      if (!draftPairs.includes(checksummed)) {
+        setDraftPairs(prev => [...prev, checksummed]);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -202,7 +204,7 @@ const AdminPanel: React.FC = () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, signer);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, signer);
 
       let tx;
       if (govOperation.trim()) {
@@ -240,7 +242,9 @@ const AdminPanel: React.FC = () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(swapAddress!, SwapAbi.abi, signer);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
+      const swapAddr = await stateManager.addressOf(REGISTRY_IDS.SWAP_CONTRACT);
+      const contract = new ethers.Contract(swapAddr, SwapAbi.abi, signer);
       const tx = await contract.updatePairs(draftPairs);
       await tx.wait();
       setCurrentPairs(draftPairs);
@@ -288,7 +292,7 @@ const AdminPanel: React.FC = () => {
       </Stack>
 
       <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
-        <Button size="small" variant="contained" onClick={handleIncludeDefault} disabled={!defaultQuote}>Include USD token</Button>
+        <Button size="small" variant="contained" onClick={handleIncludeDefault}>Include USD token</Button>
         <Button size="small" variant="contained" onClick={handleReset}>Reset</Button>
         <Button size="small" variant="contained" onClick={loadPairs}>Refresh</Button>
       </Stack>
