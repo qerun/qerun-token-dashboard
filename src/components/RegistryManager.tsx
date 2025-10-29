@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+import { ethers, isAddress } from 'ethers';
 import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -9,7 +9,6 @@ import { CONTRACT_CONFIG } from '../config';
 
 interface RegistryEntry {
   id: string;
-  label: string;
   value: string;
   valueType: number;
   requiredRole: string;
@@ -28,7 +27,6 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [status, setStatus] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEntryId, setNewEntryId] = useState('');
-  const [newEntryLabel, setNewEntryLabel] = useState('');
   const [newEntryValue, setNewEntryValue] = useState('');
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
@@ -44,45 +42,40 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
       // Known registry IDs
       const knownIds = [
-        { id: ethers.id('MAIN_CONTRACT'), label: 'QER Token' },
-        { id: ethers.id('TREASURY'), label: 'Treasury' },
-        { id: ethers.id('PRIMARY_QUOTE'), label: 'Primary Quote' },
-        { id: ethers.id('SWAP_CONTRACT'), label: 'Swap Contract' },
-        { id: ethers.id('SWAP_FEE_BPS'), label: 'Swap Fee (bps)' },
-        { id: ethers.id('TREASURY_APPLY_GOVERNANCE'), label: 'Treasury Apply Governance' },
+        'MAIN_CONTRACT',
+        'TREASURY',
+        'PRIMARY_QUOTE',
+        'SWAP_CONTRACT',
+        'SWAP_FEE_BPS',
+        'TREASURY_APPLY_GOVERNANCE',
       ];
 
       const loadedEntries: RegistryEntry[] = [];
 
-      for (const { id, label } of knownIds) {
+      for (const id of knownIds) {
         try {
           const has = await stateManager.has(id);
           if (!has) continue;
 
           const metadata = await stateManager.getMetadata(id);
-          const valueType = metadata[0];
+          const valueType = Number(metadata[0]);
           const requiredRole = metadata[1];
 
           let value: string;
-          const addressOf = stateManager.getFunction('addressOf(string)');
-          const getUint = stateManager.getFunction('getUint(bytes32)');
-          const getBool = stateManager.getFunction('getBool(bytes32)');
-          const getBytes32 = stateManager.getFunction('getBytes32(bytes32)');
-
           switch (valueType) {
             case 1: // ADDRESS
-              value = await addressOf(id);
+              value = await stateManager.addressOf(id);
               break;
             case 2: // UINT256
-              const uintValue = await getUint(id);
+              const uintValue = await stateManager.getUint(id);
               value = uintValue.toString();
               break;
             case 3: // BOOL
-              const boolValue = await getBool(id);
+              const boolValue = await stateManager.getBool(id);
               value = boolValue ? 'true' : 'false';
               break;
             case 4: // BYTES32
-              const bytesValue = await getBytes32(id);
+              const bytesValue = await stateManager.getBytes32(id);
               value = bytesValue;
               break;
             default:
@@ -93,14 +86,13 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
           loadedEntries.push({
             id,
-            label,
             value,
             valueType,
             requiredRole,
             isImmutable,
           });
         } catch (err) {
-          console.warn(`Failed to load registry entry ${label}:`, err);
+          console.warn(`Failed to load registry entry ${id}:`, err);
         }
       }
 
@@ -184,7 +176,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   };
 
   const handleAddEntry = async () => {
-    if (!window.ethereum || !newEntryId.trim() || !newEntryLabel.trim() || !newEntryValue.trim()) {
+    if (!window.ethereum || !newEntryId.trim() || !newEntryValue.trim()) {
       setStatus('Please fill in all fields.');
       return;
     }
@@ -201,7 +193,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       if (ethers.isHexString(newEntryId) && newEntryId.length === 66) {
         id = newEntryId;
       } else {
-        id = ethers.id(newEntryId);
+        id = newEntryId; // Use string directly
       }
 
       // Use DEFAULT_ADMIN_ROLE for new entries
@@ -240,7 +232,6 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       setStatus('New registry entry added successfully.');
       setShowAddForm(false);
       setNewEntryId('');
-      setNewEntryLabel('');
       setNewEntryValue('');
       setNewEntryType(1);
       await loadRegistry(); // Refresh the data
@@ -263,7 +254,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   };
 
   const formatValue = (value: string, valueType: number) => {
-    if (valueType === 1 && ethers.isAddress(value)) {
+    if (valueType === 1 && isAddress(value)) {
       return `${value.slice(0, 6)}...${value.slice(-4)}`;
     }
     return value;
@@ -285,7 +276,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           <Box key={entry.id} sx={{ p: 2, borderRadius: 1, border: '1px solid var(--qerun-gold-alpha-18)', background: 'var(--qerun-card-secondary)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{entry.label}</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{entry.id}</Typography>
                 <Chip
                   label={getValueTypeLabel(entry.valueType)}
                   size="small"
@@ -360,19 +351,10 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               fullWidth
               size="small"
               label="Entry ID"
-              placeholder="SWAP_CONTRACT or 0x..."
+              placeholder="SWAP_CONTRACT"
               value={newEntryId}
               onChange={(e) => setNewEntryId(e.target.value)}
-              helperText="Text (will be hashed to bytes32) or hex bytes32"
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label="Display Label"
-              placeholder="Swap Contract"
-              value={newEntryLabel}
-              onChange={(e) => setNewEntryLabel(e.target.value)}
-              helperText="Human-readable name for the entry"
+              helperText="Human-readable identifier for the entry"
             />
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
@@ -408,7 +390,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               <Button size="small" variant="contained" onClick={() => setShowAddForm(false)} disabled={loading}>
                 Cancel
               </Button>
-              <Button size="small" variant="contained" onClick={handleAddEntry} disabled={loading || !newEntryId.trim() || !newEntryLabel.trim() || !newEntryValue.trim()}>
+              <Button size="small" variant="contained" onClick={handleAddEntry} disabled={loading || !newEntryId.trim() || !newEntryValue.trim()}>
                 {loading ? 'Adding...' : 'Add Entry'}
               </Button>
             </Box>

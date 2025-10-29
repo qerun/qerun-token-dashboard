@@ -19,9 +19,31 @@ vi.mock('ethers', () => ({
     })),
     Contract: vi.fn().mockImplementation(() => ({
       hasRole: vi.fn().mockResolvedValue(true), // Mock admin access
+      has: vi.fn((id) => ['MAIN_CONTRACT', 'TREASURY', 'PRIMARY_QUOTE', 'SWAP_CONTRACT', 'SWAP_FEE_BPS', 'TREASURY_APPLY_GOVERNANCE'].includes(id)),
+      getMetadata: vi.fn((id) => {
+        if (id === 'MAIN_CONTRACT') return [1, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        if (id === 'TREASURY') return [1, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        if (id === 'PRIMARY_QUOTE') return [1, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        if (id === 'SWAP_CONTRACT') return [1, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        if (id === 'SWAP_FEE_BPS') return [2, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        if (id === 'TREASURY_APPLY_GOVERNANCE') return [1, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+        return [0, '0x0000000000000000000000000000000000000000000000000000000000000000'];
+      }),
       getFunction: vi.fn().mockReturnValue(vi.fn().mockResolvedValue('0x1234567890123456789012345678901234567890')),
-      addressOf: vi.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
-      getUint: vi.fn().mockResolvedValue(30),
+      addressOf: vi.fn((id) => {
+        if (id === 'MAIN_CONTRACT') return '0x1234567890123456789012345678901234567890';
+        if (id === 'TREASURY') return '0x1234567890123456789012345678901234567891';
+        if (id === 'PRIMARY_QUOTE') return '0x1234567890123456789012345678901234567892';
+        if (id === 'SWAP_CONTRACT') return '0x1234567890123456789012345678901234567893';
+        if (id === 'TREASURY_APPLY_GOVERNANCE') return '0x1234567890123456789012345678901234567894';
+        return '0x0000000000000000000000000000000000000000';
+      }),
+      getUint: vi.fn((id) => {
+        if (id === 'SWAP_FEE_BPS') return 30n;
+        return 0n;
+      }),
+      getBool: vi.fn(() => false),
+      getBytes32: vi.fn(() => '0x0000000000000000000000000000000000000000000000000000000000000000'),
       allPairs: vi.fn().mockResolvedValue([]),
       updatePairs: vi.fn().mockResolvedValue({ wait: vi.fn() }),
       balanceOf: vi.fn().mockResolvedValue(1000000000000000000000n),
@@ -30,6 +52,13 @@ vi.mock('ethers', () => ({
     getAddress: vi.fn((addr) => addr),
     ZeroAddress: '0x0000000000000000000000000000000000000000',
     formatUnits: vi.fn((value) => value.toString()),
+    keccak256: vi.fn((data) => {
+      if (data && data.toString().includes('IMMUTABLE')) {
+        return '0x1234567890123456789012345678901234567890123456789012345678901234';
+      }
+      return '0x0000000000000000000000000000000000000000000000000000000000000000';
+    }),
+    toUtf8Bytes: vi.fn((str) => Buffer.from(str, 'utf8')),
   },
 }));
 
@@ -40,11 +69,11 @@ vi.mock('../config', () => ({
     chainId: '31337',
   },
   REGISTRY_IDS: {
-    SWAP_CONTRACT: '0x1234567890123456789012345678901234567890',
-    PRIMARY_QUOTE: '0x1234567890123456789012345678901234567891',
-    MAIN_CONTRACT: '0x1234567890123456789012345678901234567892',
-    TREASURY: '0x1234567890123456789012345678901234567893',
-    SWAP_FEE_BPS: '0x1234567890123456789012345678901234567894',
+    SWAP_CONTRACT: 'SWAP_CONTRACT',
+    PRIMARY_QUOTE: 'PRIMARY_QUOTE',
+    MAIN_CONTRACT: 'MAIN_CONTRACT',
+    TREASURY: 'TREASURY',
+    SWAP_FEE_BPS: 'SWAP_FEE_BPS',
   },
 }));
 
