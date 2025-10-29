@@ -405,7 +405,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               />
             </Box>
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <Button size="small" onClick={() => setShowAddForm(false)} disabled={loading}>
+              <Button size="small" variant="contained" onClick={() => setShowAddForm(false)} disabled={loading}>
                 Cancel
               </Button>
               <Button size="small" variant="contained" onClick={handleAddEntry} disabled={loading || !newEntryId.trim() || !newEntryLabel.trim() || !newEntryValue.trim()}>
@@ -423,10 +423,10 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       )}
 
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button size="small" variant="outlined" onClick={() => setShowAddForm(!showAddForm)}>
+        <Button size="small" variant="contained" onClick={() => setShowAddForm(!showAddForm)}>
           {showAddForm ? 'Cancel Add' : '+ Add New Entry'}
         </Button>
-        <Button size="small" variant="outlined" onClick={loadRegistry}>
+        <Button size="small" variant="contained" onClick={loadRegistry}>
           Refresh
         </Button>
       </Box>

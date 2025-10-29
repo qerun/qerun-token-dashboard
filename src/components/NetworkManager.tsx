@@ -40,7 +40,9 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         color="primary"
         variant="contained"
         onClick={handleSwitchNetwork}
-        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+        sx={{
+          borderRadius: 'var(--qerun-radius-xl, 16px)'
+        }}
       >
         Switch to {networkName}
       </Button>
@@ -48,7 +50,9 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         color="primary"
         variant="contained"
         onClick={handleAddQER}
-        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+        sx={{
+          borderRadius: 'var(--qerun-radius-xl, 16px)'
+        }}
       >
         Add QER Token
       </Button>
@@ -56,7 +60,9 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         color="primary"
         variant="contained"
         onClick={handleAddUSDQ}
-        sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
+        sx={{
+          borderRadius: 'var(--qerun-radius-xl, 16px)'
+        }}
       >
         Add USDQ Token
       </Button>

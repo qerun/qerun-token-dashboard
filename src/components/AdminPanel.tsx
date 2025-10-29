@@ -288,9 +288,9 @@ const AdminPanel: React.FC = () => {
       </Stack>
 
       <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
-        <Button size="small" variant="outlined" onClick={handleIncludeDefault} disabled={!defaultQuote}>Include USD token</Button>
-        <Button size="small" variant="outlined" onClick={handleReset}>Reset</Button>
-        <Button size="small" variant="outlined" onClick={loadPairs}>Refresh</Button>
+        <Button size="small" variant="contained" onClick={handleIncludeDefault} disabled={!defaultQuote}>Include USD token</Button>
+        <Button size="small" variant="contained" onClick={handleReset}>Reset</Button>
+        <Button size="small" variant="contained" onClick={loadPairs}>Refresh</Button>
       </Stack>
 
       <Box sx={{ mb: 2 }}>

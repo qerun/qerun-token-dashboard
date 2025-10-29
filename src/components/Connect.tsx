@@ -52,8 +52,6 @@ const Connect: React.FC = () => {
                         }
                       }}
                       sx={{
-                        background: 'var(--qerun-button-bg)',
-                        color: 'var(--qerun-button-text)',
                         borderRadius: 'var(--qerun-radius-xl, 16px)',
                         minHeight: 56,
                         fontSize: '1.1rem',
