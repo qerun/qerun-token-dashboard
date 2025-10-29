@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip } from '@mui/material';
+import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -26,6 +26,11 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [editValue, setEditValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEntryId, setNewEntryId] = useState('');
+  const [newEntryLabel, setNewEntryLabel] = useState('');
+  const [newEntryValue, setNewEntryValue] = useState('');
+  const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
   const loadRegistry = useCallback(async () => {
     if (!window.ethereum) {
@@ -178,6 +183,75 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
     }
   };
 
+  const handleAddEntry = async () => {
+    if (!window.ethereum || !newEntryId.trim() || !newEntryLabel.trim() || !newEntryValue.trim()) {
+      setStatus('Please fill in all fields.');
+      return;
+    }
+
+    setLoading(true);
+    setStatus('Adding new registry entry...');
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, signer);
+
+      let id: string;
+      if (ethers.isHexString(newEntryId) && newEntryId.length === 66) {
+        id = newEntryId;
+      } else {
+        id = ethers.id(newEntryId);
+      }
+
+      // Use DEFAULT_ADMIN_ROLE for new entries
+      const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+      let tx;
+      switch (newEntryType) {
+        case 1: // ADDRESS
+          if (!ethers.isAddress(newEntryValue)) {
+            throw new Error('Invalid Ethereum address');
+          }
+          tx = await stateManager.setAddress(id, newEntryValue, DEFAULT_ADMIN_ROLE);
+          break;
+        case 2: // UINT256
+          const uintValue = BigInt(newEntryValue);
+          tx = await stateManager.setUint(id, uintValue, DEFAULT_ADMIN_ROLE);
+          break;
+        case 3: // BOOL
+          const boolValue = newEntryValue.toLowerCase() === 'true';
+          tx = await stateManager.setBool(id, boolValue, DEFAULT_ADMIN_ROLE);
+          break;
+        case 4: // BYTES32
+          let bytes32Value: string;
+          if (ethers.isHexString(newEntryValue) && newEntryValue.length === 66) {
+            bytes32Value = newEntryValue;
+          } else {
+            bytes32Value = ethers.id(newEntryValue);
+          }
+          tx = await stateManager.setBytes32(id, bytes32Value, DEFAULT_ADMIN_ROLE);
+          break;
+        default:
+          throw new Error('Unsupported value type');
+      }
+
+      await tx.wait();
+      setStatus('New registry entry added successfully.');
+      setShowAddForm(false);
+      setNewEntryId('');
+      setNewEntryLabel('');
+      setNewEntryValue('');
+      setNewEntryType(1);
+      await loadRegistry(); // Refresh the data
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(`Failed to add registry entry: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getValueTypeLabel = (valueType: number) => {
     switch (valueType) {
       case 1: return 'Address';
@@ -278,13 +352,80 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
         ))}
       </Stack>
 
+      {showAddForm && (
+        <Box sx={{ mt: 3, p: 2, borderRadius: 1, border: '1px solid var(--qerun-gold-alpha-18)', background: 'var(--qerun-card-secondary)' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>Add New Registry Entry</Typography>
+          <Stack spacing={2}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Entry ID"
+              placeholder="SWAP_CONTRACT or 0x..."
+              value={newEntryId}
+              onChange={(e) => setNewEntryId(e.target.value)}
+              helperText="Text (will be hashed to bytes32) or hex bytes32"
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Display Label"
+              placeholder="Swap Contract"
+              value={newEntryLabel}
+              onChange={(e) => setNewEntryLabel(e.target.value)}
+              helperText="Human-readable name for the entry"
+            />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                select
+                size="small"
+                label="Value Type"
+                value={newEntryType}
+                onChange={(e) => setNewEntryType(Number(e.target.value))}
+                sx={{ minWidth: 120 }}
+              >
+                <MenuItem value={1}>Address</MenuItem>
+                <MenuItem value={2}>Number</MenuItem>
+                <MenuItem value={3}>Boolean</MenuItem>
+                <MenuItem value={4}>Bytes32</MenuItem>
+              </TextField>
+              <TextField
+                fullWidth
+                size="small"
+                label="Value"
+                placeholder={newEntryType === 1 ? '0x...' : newEntryType === 4 ? 'text or 0x...' : 'value'}
+                value={newEntryValue}
+                onChange={(e) => setNewEntryValue(e.target.value)}
+                helperText={
+                  newEntryType === 1 ? 'Ethereum address' :
+                  newEntryType === 2 ? 'Number (uint256)' :
+                  newEntryType === 3 ? 'true or false' :
+                  newEntryType === 4 ? 'Text (will be hashed) or hex bytes32' :
+                  'Value'
+                }
+              />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button size="small" onClick={() => setShowAddForm(false)} disabled={loading}>
+                Cancel
+              </Button>
+              <Button size="small" variant="contained" onClick={handleAddEntry} disabled={loading || !newEntryId.trim() || !newEntryLabel.trim() || !newEntryValue.trim()}>
+                {loading ? 'Adding...' : 'Add Entry'}
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      )}
+
       {entries.length === 0 && !status && (
         <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)', textAlign: 'center', py: 4 }}>
           No registry entries found.
         </Typography>
       )}
 
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button size="small" variant="outlined" onClick={() => setShowAddForm(!showAddForm)}>
+          {showAddForm ? 'Cancel Add' : '+ Add New Entry'}
+        </Button>
         <Button size="small" variant="outlined" onClick={loadRegistry}>
           Refresh
         </Button>

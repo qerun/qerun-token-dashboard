@@ -10,8 +10,8 @@ declare global {
 const makeId = (label: string) => ethers.id(label);
 
 export const CONTRACT_CONFIG = {
-  stateManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  chainId: '31337',
+  stateManager: window.__RUNTIME_CONFIG?.VITE_STATE_MANAGER_ADDRESS || '0xD2689D396b3A06b607d2143a50097a034cd8476c',
+  chainId: window.__RUNTIME_CONFIG?.VITE_CHAIN_ID || '97', // Binance Smart Chain Testnet
 } as const;
 
 export const REGISTRY_IDS = {
