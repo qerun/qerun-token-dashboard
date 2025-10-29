@@ -11,4 +11,7 @@ export default defineConfig({
       printBasicPrototype: true,
     },
   },
+  esbuild: {
+    jsx: "automatic",
+  },
 });

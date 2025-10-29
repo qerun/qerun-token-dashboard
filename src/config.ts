@@ -1,5 +1,3 @@
-import { ethers } from 'ethers';
-
 declare global {
   interface Window {
     __RUNTIME_CONFIG?: Record<string, string>;
@@ -7,7 +5,7 @@ declare global {
 }
 
 
-const makeId = (label: string) => ethers.id(label);
+const makeId = (label: string) => label;
 
 const rawChainId = window.__RUNTIME_CONFIG?.VITE_CHAIN_ID || (typeof process !== 'undefined' ? process.env.VITE_CHAIN_ID : undefined);
 

@@ -85,7 +85,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
         let resolved: ResolvedAddresses;
         try {
             const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
-            const getAddress = stateManager.getFunction('getAddress');
+            const addressOf = stateManager.getFunction('addressOf');
             const hasEntry = (() => {
                 try {
                     return stateManager.getFunction('has');
@@ -103,7 +103,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                     }
                 }
                 try {
-                    return await getAddress(id);
+                    return await addressOf(id);
                 } catch {
                     throw new Error('missing');
                 }

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button, Stack } from '@mui/material';
-import { addTokenToWallet, switchToLocalhost } from '../utils/wallet';
+import { addTokenToWallet, switchToNetwork, getNetworkName } from '../utils/wallet';
 import { TOKENS } from '../config/tokens';
+import { CONTRACT_CONFIG } from '../config';
 
 type Props = {
   onAfterSwitch?: () => void;
@@ -19,13 +20,19 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
   };
 
   const handleSwitchNetwork = async () => {
+    if (!CONTRACT_CONFIG.chainId) {
+      alert('No chain ID configured');
+      return;
+    }
     try {
-      await switchToLocalhost();
+      await switchToNetwork(CONTRACT_CONFIG.chainId);
     } catch (error) {
       console.error('Failed to switch network:', error);
     }
     onAfterSwitch?.();
   };
+
+  const networkName = CONTRACT_CONFIG.chainId ? getNetworkName(CONTRACT_CONFIG.chainId) : 'Configured Network';
 
   return (
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap' }}>
@@ -35,7 +42,7 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         onClick={handleSwitchNetwork}
         sx={{ background: 'var(--qerun-button-bg)', color: 'var(--qerun-button-text)', borderRadius: 'var(--qerun-radius-xl, 16px)' }}
       >
-        Switch to Localhost
+        Switch to {networkName}
       </Button>
       <Button
         color="primary"

@@ -42,9 +42,9 @@ vi.mock('../config', () => ({
     chainId: '31337',
   },
   REGISTRY_IDS: {
-    SWAP_CONTRACT: '0x1234567890123456789012345678901234567890',
-    PRIMARY_QUOTE: '0x1234567890123456789012345678901234567891',
-    MAIN_CONTRACT: '0x1234567890123456789012345678901234567892',
+    SWAP_CONTRACT: 'SWAP_CONTRACT',
+    PRIMARY_QUOTE: 'PRIMARY_QUOTE',
+    MAIN_CONTRACT: 'MAIN_CONTRACT',
   },
   DEFAULT_DECIMALS: {
     usd: 18,
@@ -67,7 +67,7 @@ describe('Swap', () => {
     render(<Swap />);
 
     expect(screen.getByText('Swap tokens')).toBeInTheDocument();
-    expect(screen.getByText('Choose the direction, enter an amount, and confirm with your wallet.')).toBeInTheDocument();
+    expect(screen.getByText(/Choose the direction, enter an amount, and confirm with your wallet/)).toBeInTheDocument();
   });
 
   it('renders form elements', () => {

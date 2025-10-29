@@ -20,7 +20,7 @@ vi.mock('ethers', () => ({
     Contract: vi.fn().mockImplementation(() => ({
       hasRole: vi.fn().mockResolvedValue(true), // Mock admin access
       getFunction: vi.fn().mockReturnValue(vi.fn().mockResolvedValue('0x1234567890123456789012345678901234567890')),
-      getAddress: vi.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
+      addressOf: vi.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
       getUint: vi.fn().mockResolvedValue(30),
       allPairs: vi.fn().mockResolvedValue([]),
       updatePairs: vi.fn().mockResolvedValue({ wait: vi.fn() }),
@@ -83,7 +83,7 @@ describe('AdminPanel', () => {
       expect(screen.getByText('Include USD token')).toBeInTheDocument();
     });
     expect(screen.getByText('Reset')).toBeInTheDocument();
-    expect(screen.getByText('Refresh')).toBeInTheDocument();
+    expect(screen.getAllByText('Refresh')).toHaveLength(2); // One in AdminPanel, one in RegistryManager
     expect(screen.getByText('Submit updatePairs')).toBeInTheDocument();
   });
 

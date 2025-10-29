@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NetworkManager from './NetworkManager';
-import { addTokenToWallet, switchToLocalhost } from '../utils/wallet';
+import { addTokenToWallet, switchToNetwork, getNetworkName } from '../utils/wallet';
 
 // Mock the wallet utilities
 vi.mock('../utils/wallet', () => ({
   addTokenToWallet: vi.fn(),
-  switchToLocalhost: vi.fn(),
+  switchToNetwork: vi.fn(),
+  getNetworkName: vi.fn(),
 }));
 
 // Mock the tokens config
@@ -18,12 +19,21 @@ vi.mock('../config/tokens', () => ({
   },
 }));
 
+// Mock the config
+vi.mock('../config', () => ({
+  CONTRACT_CONFIG: {
+    chainId: '97',
+  },
+}));
+
 describe('NetworkManager', () => {
   const mockAddTokenToWallet = vi.mocked(addTokenToWallet);
-  const mockSwitchToLocalhost = vi.mocked(switchToLocalhost);
+  const mockSwitchToNetwork = vi.mocked(switchToNetwork);
+  const mockGetNetworkName = vi.mocked(getNetworkName);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetNetworkName.mockReturnValue('BSC Testnet');
     // Mock window.alert
     vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
@@ -35,21 +45,21 @@ describe('NetworkManager', () => {
   it('renders all buttons', () => {
     render(<NetworkManager />);
 
-    expect(screen.getByText('Switch to Sepolia')).toBeInTheDocument();
+    expect(screen.getByText('Switch to BSC Testnet')).toBeInTheDocument();
     expect(screen.getByText('Add QER Token')).toBeInTheDocument();
     expect(screen.getByText('Add USDQ Token')).toBeInTheDocument();
   });
 
-  it('calls switchToLocalhost when Switch to Sepolia button is clicked', async () => {
+  it('calls switchToNetwork when Switch button is clicked', async () => {
     const user = userEvent.setup();
     const mockOnAfterSwitch = vi.fn();
 
     render(<NetworkManager onAfterSwitch={mockOnAfterSwitch} />);
 
-    const switchButton = screen.getByText('Switch to Sepolia');
+    const switchButton = screen.getByText('Switch to BSC Testnet');
     await user.click(switchButton);
 
-    expect(mockSwitchToLocalhost).toHaveBeenCalledTimes(1);
+    expect(mockSwitchToNetwork).toHaveBeenCalledWith('97');
     expect(mockOnAfterSwitch).toHaveBeenCalledTimes(1);
   });
 
@@ -112,17 +122,17 @@ describe('NetworkManager', () => {
   it('handles switch network errors gracefully', async () => {
     const user = userEvent.setup();
     const mockOnAfterSwitch = vi.fn();
-    mockSwitchToLocalhost.mockRejectedValue(new Error('Network switch failed'));
+    mockSwitchToNetwork.mockRejectedValue(new Error('Network switch failed'));
 
     // Mock console.error to avoid test output pollution
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<NetworkManager onAfterSwitch={mockOnAfterSwitch} />);
 
-    const switchButton = screen.getByText('Switch to Sepolia');
+    const switchButton = screen.getByText('Switch to BSC Testnet');
     await user.click(switchButton);
 
-    expect(mockSwitchToLocalhost).toHaveBeenCalledTimes(1);
+    expect(mockSwitchToNetwork).toHaveBeenCalledWith('97');
     expect(mockOnAfterSwitch).toHaveBeenCalledTimes(1); // Still called even on error
     expect(consoleSpy).toHaveBeenCalled();
 
