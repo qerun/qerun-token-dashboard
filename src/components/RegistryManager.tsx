@@ -45,15 +45,14 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   let hasStateManagerSetter = false;
   let isGovernanceEnabled = undefined as boolean | undefined;
 
-      // Check if contract has setStateManager function
+      // Check if contract has setStateManager function by looking for the selector in runtime bytecode
       try {
-        const genericContract = new ethers.Contract(address, [
-          'function setStateManager(address) external'
-        ], provider);
-        await genericContract.setStateManager.staticCall('0x0000000000000000000000000000000000000000');
-        hasStateManagerSetter = true;
+        const selector = ethers.keccak256(ethers.toUtf8Bytes('setStateManager(address)')).slice(2, 10); // first 4 bytes
+        if (code && code.includes(selector)) {
+          hasStateManagerSetter = true;
+        }
       } catch {
-        // Function doesn't exist or isn't callable
+        // ignore selector check failures
       }
 
       // Check if the contract exposes isGovernanceEnabled() — if so, read it.
@@ -90,7 +89,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       // Attempt to read DEFAULT_ADMIN_ROLE grants from events to show current admin accounts
       try {
         if (typeof (stateManager as any).queryFilter === 'function') {
-          const DEFAULT_ADMIN_ROLE = '0x00000000000000000000000000000000000000000000000000000000000000000';
+          const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
           const granted = await (stateManager as any).queryFilter(stateManager.filters.RoleGranted(DEFAULT_ADMIN_ROLE), 0, 'latest');
           const revoked = await (stateManager as any).queryFilter(stateManager.filters.RoleRevoked(DEFAULT_ADMIN_ROLE), 0, 'latest');
           const admins = new Set<string>();
@@ -147,6 +146,9 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               isContract = contractInfo.isContract;
               hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
               isGovernanceEnabled = contractInfo.isGovernanceEnabled;
+              // Debug: log detected capability for developer verification
+              // eslint-disable-next-line no-console
+              console.debug(`RegistryManager: ${id} -> isContract=${isContract}, hasStateManagerSetter=${hasStateManagerSetter}, isGovernanceEnabled=${String(isGovernanceEnabled)}`);
               break;
             }
             case 2: { // UINT256
