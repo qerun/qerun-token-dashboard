@@ -433,6 +433,13 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                   size="small"
                   sx={{ fontSize: '0.7rem', height: '20px' }}
                 />
+                {entry.requiredRole && (
+                  <Chip
+                    label={entry.requiredRole && entry.requiredRole.length > 0 ? `${entry.requiredRole.slice(0, 6)}...${entry.requiredRole.slice(-4)}` : 'Role'}
+                    size="small"
+                    sx={{ fontSize: '0.7rem', height: '20px' }}
+                  />
+                )}
                 {entry.isImmutable && (
                   <Chip
                     label="Immutable"
@@ -554,6 +561,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                   wordBreak: 'break-all',
                   color: 'var(--qerun-text-muted)'
                 }}
+                title={entry.value}
               >
                 {formatValue(entry.value, entry.valueType)}
               </Typography>
