@@ -5,9 +5,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import StateManagerAbi from '../abi/StateManager.json';
-import TokenAbi from '../abi/Token.json';
-import SwapAbi from '../abi/Swap.json';
-import TreasuryAbi from '../abi/Treasury.json';
 import { CONTRACT_CONFIG } from '../config';
 
 interface RegistryEntry {
@@ -17,8 +14,9 @@ interface RegistryEntry {
   requiredRole: string;
   isImmutable: boolean;
   isContract?: boolean;
-  contractType?: 'token' | 'swap' | 'treasury' | 'unknown';
-  governanceEnabled?: boolean;
+  hasStateManagerSetter?: boolean;
+  hasGovernanceModule?: boolean;
+  isGovernanceEnabled?: boolean;
 }
 
 interface RegistryManagerProps {
@@ -36,58 +34,60 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [newEntryValue, setNewEntryValue] = useState('');
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
-  // Helper function to detect if address is a contract and what type
-  const detectContractType = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, contractType?: 'token' | 'swap' | 'treasury' | 'unknown', governanceEnabled?: boolean}> => {
+  // Helper function to detect if address is a contract and has setStateManager function
+  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, hasGovernanceModule?: boolean, isGovernanceEnabled?: boolean}> => {
     try {
       const code = await provider.getCode(address);
       if (code === '0x') {
         return { isContract: false };
       }
 
-      // Try to detect contract type by calling methods
-      let contractType: 'token' | 'swap' | 'treasury' | 'unknown' = 'unknown';
-      let governanceEnabled = false;
+      let hasStateManagerSetter = false;
+      let hasGovernanceModule = false;
+      let isGovernanceEnabled = false;
 
+      // Check if contract has setStateManager function
       try {
-        // Check if it's a Token contract
-        const tokenContract = new ethers.Contract(address, TokenAbi.abi, provider);
-        const tokenGovernance = await tokenContract.governanceEnabled();
-        if (typeof tokenGovernance === 'boolean') {
-          contractType = 'token';
-          governanceEnabled = tokenGovernance;
-        }
+        const genericContract = new ethers.Contract(address, [
+          'function setStateManager(address) external'
+        ], provider);
+        await genericContract.setStateManager.staticCall('0x0000000000000000000000000000000000000000');
+        hasStateManagerSetter = true;
       } catch {
+        // Function doesn't exist or isn't callable
+      }
+
+      // Check if StateManager has governance module for this contract
+      if (CONTRACT_CONFIG.stateManager) {
         try {
-          // Check if it's a Swap contract
-          const swapContract = new ethers.Contract(address, SwapAbi.abi, provider);
-          const swapGovernance = await swapContract.governanceEnabled();
-          if (typeof swapGovernance === 'boolean') {
-            contractType = 'swap';
-            governanceEnabled = swapGovernance;
+          const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
+          const governanceModule = await stateManager.getGovernanceModule(address);
+          hasGovernanceModule = governanceModule !== ethers.ZeroAddress;
+          
+          // If has governance module, check if governance is enabled on the contract
+          if (hasGovernanceModule) {
+            const contract = new ethers.Contract(address, ['function isGovernanceEnabled() view returns (bool)'], provider);
+            isGovernanceEnabled = await contract.isGovernanceEnabled();
           }
-        } catch {
-          try {
-            // Check if it's a Treasury contract
-            const treasuryContract = new ethers.Contract(address, TreasuryAbi.abi, provider);
-            const treasuryGovernance = await treasuryContract.governanceEnabled();
-            if (typeof treasuryGovernance === 'boolean') {
-              contractType = 'treasury';
-              governanceEnabled = treasuryGovernance;
-            }
-          } catch {
-            // Unknown contract type
-            contractType = 'unknown';
-          }
+        } catch (error: unknown) {
+          // Governance check failed
+          console.warn('Governance check failed:', error);
         }
       }
 
-      return { isContract: true, contractType, governanceEnabled };
+      return { 
+        isContract: true, 
+        hasStateManagerSetter,
+        hasGovernanceModule,
+        isGovernanceEnabled
+      };
     } catch {
       return { isContract: false };
     }
   };
 
   const loadRegistry = useCallback(async () => {
+
     if (!window.ethereum || !CONTRACT_CONFIG.stateManager) {
       setStatus('Wallet not detected or StateManager address not configured.');
       return;
@@ -120,30 +120,36 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
           let value: string;
           let isContract = false;
-          let contractType: 'token' | 'swap' | 'treasury' | 'unknown' | undefined;
-          let governanceEnabled = false;
+          let hasStateManagerSetter = false;
+          let hasGovernanceModule = false;
+          let isGovernanceEnabled = false;
 
           switch (valueType) {
-            case 1: // ADDRESS
+            case 1: { // ADDRESS
               value = await stateManager.addressOf(id);
-              // Check if this address is a contract and get governance status
-              const contractInfo = await detectContractType(value, provider);
+              // Check if this address is a contract and has setStateManager function
+              const contractInfo = await detectContractCapabilities(value, provider);
               isContract = contractInfo.isContract;
-              contractType = contractInfo.contractType;
-              governanceEnabled = contractInfo.governanceEnabled || false;
+              hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
+              hasGovernanceModule = contractInfo.hasGovernanceModule || false;
+              isGovernanceEnabled = contractInfo.isGovernanceEnabled || false;
               break;
-            case 2: // UINT256
+            }
+            case 2: { // UINT256
               const uintValue = await stateManager.getUint(id);
               value = uintValue.toString();
               break;
-            case 3: // BOOL
+            }
+            case 3: { // BOOL
               const boolValue = await stateManager.getBool(id);
               value = boolValue ? 'true' : 'false';
               break;
-            case 4: // BYTES32
+            }
+            case 4: { // BYTES32
               const bytesValue = await stateManager.getBytes32(id);
               value = bytesValue;
               break;
+            }
             default:
               value = 'Unknown type';
           }
@@ -157,8 +163,9 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
             requiredRole,
             isImmutable,
             isContract,
-            contractType,
-            governanceEnabled,
+            hasStateManagerSetter,
+            hasGovernanceModule,
+            isGovernanceEnabled,
           });
         } catch (err) {
           console.warn(`Failed to load registry entry ${id}:`, err);
@@ -167,56 +174,73 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
       setEntries(loadedEntries);
       setStatus(null);
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to load registry: ${message}`);
       setEntries([]);
     }
-  }, []);
+  }, [detectContractCapabilities]);
 
-  // Function to toggle governance for a contract
-  const toggleGovernance = async (entry: RegistryEntry, enable: boolean) => {
-    if (!window.ethereum || !entry.isContract || !entry.contractType) {
-      setStatus('Cannot toggle governance for this entry.');
+  // Function to set StateManager for a contract
+  const setContractStateManager = async (entry: RegistryEntry, newStateManagerAddress: string) => {
+    if (!window.ethereum || !entry.isContract || !entry.hasStateManagerSetter) {
+      setStatus('Cannot set StateManager for this contract.');
       return;
     }
 
     setLoading(true);
-    setStatus(`${enable ? 'Enabling' : 'Disabling'} governance...`);
+    setStatus('Setting StateManager address...');
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      let contract;
-      switch (entry.contractType) {
-        case 'token':
-          contract = new ethers.Contract(entry.value, TokenAbi.abi, signer);
-          if (enable) {
-            await contract.enableGovernance();
-          } else {
-            await contract.disableGovernance();
-          }
-          break;
-        case 'swap':
-          contract = new ethers.Contract(entry.value, SwapAbi.abi, signer);
-          if (enable) {
-            await contract.enableGovernance();
-          } else {
-            await contract.disableGovernance();
-          }
-          break;
-        case 'treasury':
-          contract = new ethers.Contract(entry.value, TreasuryAbi.abi, signer);
-          await contract.setGovernanceEnabled(enable);
-          break;
-        default:
-          throw new Error('Unsupported contract type for governance toggle');
+      // Create a generic contract interface to call setStateManager
+      const contract = new ethers.Contract(entry.value, [
+        'function setStateManager(address) external'
+      ], signer);
+      
+      await contract.setStateManager(newStateManagerAddress);
+
+      setStatus('StateManager address set successfully.');
+      await loadRegistry(); // Refresh the data
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(`Failed to set StateManager: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    // Function to toggle governance enabled/disabled for a contract
+  const toggleGovernanceEnabled = async (entry: RegistryEntry, enabled: boolean) => {
+    if (!window.ethereum || !entry.isContract || !entry.hasGovernanceModule) {
+      setStatus('Cannot toggle governance for this contract.');
+      return;
+    }
+
+    setLoading(true);
+    setStatus(`${enabled ? 'Enabling' : 'Disabling'} governance...`);
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      
+      // Call enableGovernance or disableGovernance on the contract itself
+      const contract = new ethers.Contract(entry.value, [
+        'function enableGovernance() external',
+        'function disableGovernance() external'
+      ], signer);
+      
+      if (enabled) {
+        await contract.enableGovernance();
+      } else {
+        await contract.disableGovernance();
       }
 
-      setStatus(`Governance ${enable ? 'enabled' : 'disabled'} successfully.`);
+      setStatus(`Governance ${enabled ? 'enabled' : 'disabled'} successfully.`);
       await loadRegistry(); // Refresh the data
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to toggle governance: ${message}`);
     } finally {
@@ -250,25 +274,28 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, signer);
+      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, signer);
 
       let tx;
       switch (entry.valueType) {
-        case 1: // ADDRESS
+        case 1: { // ADDRESS
           if (!ethers.isAddress(editValue)) {
             throw new Error('Invalid Ethereum address');
           }
           tx = await stateManager.setAddress(entry.id, editValue, entry.requiredRole);
           break;
-        case 2: // UINT256
+        }
+        case 2: { // UINT256
           const uintValue = BigInt(editValue);
           tx = await stateManager.setUint(entry.id, uintValue, entry.requiredRole);
           break;
-        case 3: // BOOL
+        }
+        case 3: { // BOOL
           const boolValue = editValue.toLowerCase() === 'true';
           tx = await stateManager.setBool(entry.id, boolValue, entry.requiredRole);
           break;
-        case 4: // BYTES32
+        }
+        case 4: { // BYTES32
           let bytes32Value: string;
           if (ethers.isHexString(editValue) && editValue.length === 66) {
             bytes32Value = editValue;
@@ -277,6 +304,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           }
           tx = await stateManager.setBytes32(entry.id, bytes32Value, entry.requiredRole);
           break;
+        }
         default:
           throw new Error('Unsupported value type');
       }
@@ -286,7 +314,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       setEditingId(null);
       setEditValue('');
       await loadRegistry(); // Refresh the data
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to update registry: ${message}`);
     } finally {
@@ -320,21 +348,24 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
       let tx;
       switch (newEntryType) {
-        case 1: // ADDRESS
+        case 1: { // ADDRESS
           if (!ethers.isAddress(newEntryValue)) {
             throw new Error('Invalid Ethereum address');
           }
           tx = await stateManager.setAddress(id, newEntryValue, DEFAULT_ADMIN_ROLE);
           break;
-        case 2: // UINT256
+        }
+        case 2: { // UINT256
           const uintValue = BigInt(newEntryValue);
           tx = await stateManager.setUint(id, uintValue, DEFAULT_ADMIN_ROLE);
           break;
-        case 3: // BOOL
+        }
+        case 3: { // BOOL
           const boolValue = newEntryValue.toLowerCase() === 'true';
           tx = await stateManager.setBool(id, boolValue, DEFAULT_ADMIN_ROLE);
           break;
-        case 4: // BYTES32
+        }
+        case 4: { // BYTES32
           let bytes32Value: string;
           if (ethers.isHexString(newEntryValue) && newEntryValue.length === 66) {
             bytes32Value = newEntryValue;
@@ -343,6 +374,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           }
           tx = await stateManager.setBytes32(id, bytes32Value, DEFAULT_ADMIN_ROLE);
           break;
+        }
         default:
           throw new Error('Unsupported value type');
       }
@@ -354,7 +386,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       setNewEntryValue('');
       setNewEntryType(1);
       await loadRegistry(); // Refresh the data
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Failed to add registry entry: ${message}`);
     } finally {
@@ -411,9 +443,17 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                 )}
                 {entry.isContract && (
                   <Chip
-                    label={`${entry.contractType?.toUpperCase() || 'CONTRACT'}`}
+                    label="CONTRACT"
                     size="small"
                     color="primary"
+                    sx={{ fontSize: '0.7rem', height: '20px' }}
+                  />
+                )}
+                {entry.hasGovernanceModule && (
+                  <Chip
+                    label={entry.isGovernanceEnabled ? "GOVERNANCE ENABLED" : "GOVERNANCE DISABLED"}
+                    size="small"
+                    color={entry.isGovernanceEnabled ? "success" : "default"}
                     sx={{ fontSize: '0.7rem', height: '20px' }}
                   />
                 )}
@@ -426,20 +466,39 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                     </IconButton>
                   </Tooltip>
                 )}
-                {entry.isContract && entry.contractType && entry.contractType !== 'unknown' && (
-                  <Tooltip title={`Governance ${entry.governanceEnabled ? 'Enabled' : 'Disabled'}`}>
+                {entry.hasStateManagerSetter && (
+                  <Tooltip title="Set StateManager">
+                    <IconButton 
+                      size="small" 
+                      aria-label="Set StateManager"
+                      onClick={() => {
+                        const newAddress = prompt('Enter new StateManager address:');
+                        if (newAddress && ethers.isAddress(newAddress)) {
+                          setContractStateManager(entry, newAddress);
+                        } else if (newAddress) {
+                          setStatus('Invalid Ethereum address');
+                        }
+                      }}
+                      disabled={loading}
+                    >
+                      ⚙️
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {entry.hasGovernanceModule && (
+                  <Tooltip title={entry.isGovernanceEnabled ? 'Governance is enabled - Click to disable' : 'Governance is disabled - Click to enable'}>
                     <FormControlLabel
                       control={
                         <Switch
                           size="small"
-                          checked={entry.governanceEnabled || false}
-                          onChange={(e) => toggleGovernance(entry, e.target.checked)}
+                          checked={entry.isGovernanceEnabled}
+                                                    onChange={() => toggleGovernanceEnabled(entry, !entry.isGovernanceEnabled)}
                           disabled={loading}
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
                               color: 'var(--qerun-gold)',
                               '&:hover': {
-                                backgroundColor: 'rgba(255, 193, 7, 0.08)',
+                                backgroundColor: 'rgba(255, 215, 0, 0.08)',
                               },
                             },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
@@ -448,8 +507,12 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                           }}
                         />
                       }
-                      label=""
-                      sx={{ mr: 0 }}
+                      label={
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'var(--qerun-text-muted)' }}>
+                          {entry.isGovernanceEnabled ? 'Enabled' : 'Disabled'}
+                        </Typography>
+                      }
+                      sx={{ mx: 0 }}
                     />
                   </Tooltip>
                 )}
