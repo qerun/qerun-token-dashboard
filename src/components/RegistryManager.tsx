@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ethers, isAddress } from 'ethers';
-import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem, Switch, FormControlLabel } from '@mui/material';
+import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem, Switch, FormControlLabel, Checkbox } from '@mui/material';
 import ContentCopy from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -25,10 +25,13 @@ interface RegistryManagerProps {
 }
 
 const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
+  // Precompute role hashes for stable comparisons (use keccak256 UTF-8 of the role name)
+  const IMMUTABLE_ROLE = ethers.keccak256(ethers.toUtf8Bytes('IMMUTABLE'));
   const [entries, setEntries] = useState<RegistryEntry[]>([]);
   const [adminAccounts, setAdminAccounts] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [editImmutable, setEditImmutable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -184,7 +187,20 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               value = 'Unknown type';
           }
 
-          const isImmutable = requiredRole === ethers.keccak256(ethers.toUtf8Bytes('IMMUTABLE'));
+          // Normalize requiredRole into a hex string and compare to IMMUTABLE_ROLE robustly
+          let roleHex: string;
+          try {
+            // ethers.hexlify will convert BytesLike or number[] into a hex string; if requiredRole is already a string this returns the same
+            roleHex = ethers.hexlify(requiredRole as any);
+          } catch {
+            roleHex = String(requiredRole || '');
+          }
+
+          const isImmutable = roleHex.toLowerCase() === String(IMMUTABLE_ROLE).toLowerCase();
+
+          // Debugging: helpful output when inspecting why an entry isn't flagged immutable
+          // eslint-disable-next-line no-console
+          console.debug(`RegistryManager: id=${id} requiredRole=${roleHex} IMMUTABLE=${String(IMMUTABLE_ROLE)} isImmutable=${isImmutable}`);
 
           loadedEntries.push({
             id,
@@ -285,11 +301,19 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const handleEdit = (entry: RegistryEntry) => {
     setEditingId(entry.id);
     setEditValue(entry.value);
+    // initialize the immutable checkbox based on the current requiredRole
+    try {
+      const isImm = String(entry.requiredRole).toLowerCase() === String(IMMUTABLE_ROLE).toLowerCase();
+      setEditImmutable(isImm);
+    } catch {
+      setEditImmutable(false);
+    }
   };
 
   const handleCancel = () => {
     setEditingId(null);
     setEditValue('');
+    setEditImmutable(false);
   };
 
   const handleSave = async (entry: RegistryEntry) => {
@@ -307,22 +331,25 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, signer);
 
       let tx;
-      switch (entry.valueType) {
+  // determine which requiredRole to pass when saving (immutable checkbox overrides)
+  const requiredRoleToUse = editImmutable ? IMMUTABLE_ROLE : entry.requiredRole;
+
+  switch (entry.valueType) {
         case 1: { // ADDRESS
           if (!ethers.isAddress(editValue)) {
             throw new Error('Invalid Ethereum address');
           }
-          tx = await stateManager.setAddress(entry.id, editValue, entry.requiredRole);
+          tx = await stateManager.setAddress(entry.id, editValue, requiredRoleToUse);
           break;
         }
         case 2: { // UINT256
           const uintValue = BigInt(editValue);
-          tx = await stateManager.setUint(entry.id, uintValue, entry.requiredRole);
+          tx = await stateManager.setUint(entry.id, uintValue, requiredRoleToUse);
           break;
         }
         case 3: { // BOOL
           const boolValue = editValue.toLowerCase() === 'true';
-          tx = await stateManager.setBool(entry.id, boolValue, entry.requiredRole);
+          tx = await stateManager.setBool(entry.id, boolValue, requiredRoleToUse);
           break;
         }
         case 4: { // BYTES32
@@ -332,7 +359,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           } else {
             bytes32Value = ethers.id(editValue);
           }
-          tx = await stateManager.setBytes32(entry.id, bytes32Value, entry.requiredRole);
+          tx = await stateManager.setBytes32(entry.id, bytes32Value, requiredRoleToUse);
           break;
         }
         default:
@@ -588,6 +615,11 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                     entry.valueType === 4 ? 'Text (will be hashed) or hex bytes32' :
                     'Value'
                   }
+                />
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={editImmutable} onChange={(e) => setEditImmutable(e.target.checked)} />}
+                  label={<Typography variant="caption" sx={{ fontSize: '0.75rem' }}>Immutable</Typography>}
+                  sx={{ ml: 1 }}
                 />
                 <Tooltip title="Save">
                   <IconButton size="small" onClick={() => handleSave(entry)} disabled={loading}>
