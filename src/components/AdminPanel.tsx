@@ -41,15 +41,51 @@ const AdminPanel: React.FC = () => {
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
+
+      const smAddress = CONTRACT_CONFIG.stateManager as string | undefined;
+      if (!smAddress) {
+        setHasAdminAccess(false);
+        setStatus('StateManager is not configured for this build.');
+        return;
+      }
+
+      // Defensive: ensure a contract exists at the configured address on the connected provider
+      // Some test environments or providers (mocked BrowserProvider) may not implement getCode.
+      if (typeof (provider as any).getCode === 'function') {
+        try {
+          const code = await (provider as any).getCode(smAddress);
+          if (!code || code === '0x') {
+            setHasAdminAccess(false);
+            setStatus('No StateManager contract found on the connected network. Please switch networks in your wallet.');
+            return;
+          }
+        } catch (getCodeErr) {
+          console.error('getCode error:', getCodeErr);
+          setHasAdminAccess(false);
+          setStatus('Unable to verify StateManager bytecode on the connected network.');
+          return;
+        }
+      } else {
+        // Provider doesn't support getCode (likely test mocks). Skip bytecode check.
+        // Proceed to hasRole call which tests may mock.
+      }
+
+      const stateManager = new ethers.Contract(smAddress, StateManagerAbi.abi, provider);
 
       // Check if user has the DEFAULT_ADMIN_ROLE
       const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
-      const hasAdminRole = await stateManager.hasRole(DEFAULT_ADMIN_ROLE, activeAccount);
-      setHasAdminAccess(hasAdminRole);
+      try {
+        const hasAdminRole = await stateManager.hasRole(DEFAULT_ADMIN_ROLE, activeAccount);
+        setHasAdminAccess(hasAdminRole);
+      } catch (callErr) {
+        console.error('hasRole call failed:', callErr);
+        setHasAdminAccess(false);
+        setStatus('Failed to check admin role via the connected wallet provider. Try switching network or using a different RPC/wallet.');
+      }
     } catch (err) {
       console.error('Failed to check admin access:', err);
       setHasAdminAccess(false);
+      setStatus(err instanceof Error ? err.message : String(err));
     }
   }, [activeAccount, isConnected]);
 

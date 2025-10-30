@@ -15,7 +15,6 @@ interface RegistryEntry {
   isImmutable: boolean;
   isContract?: boolean;
   hasStateManagerSetter?: boolean;
-  hasGovernanceModule?: boolean;
   isGovernanceEnabled?: boolean;
 }
 
@@ -25,6 +24,7 @@ interface RegistryManagerProps {
 
 const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [entries, setEntries] = useState<RegistryEntry[]>([]);
+  const [adminAccounts, setAdminAccounts] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,16 +35,15 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
   // Helper function to detect if address is a contract and has setStateManager function
-  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, hasGovernanceModule?: boolean, isGovernanceEnabled?: boolean}> => {
+  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, isGovernanceEnabled?: boolean}> => {
     try {
       const code = await provider.getCode(address);
       if (code === '0x') {
         return { isContract: false };
       }
 
-      let hasStateManagerSetter = false;
-      let hasGovernanceModule = false;
-      let isGovernanceEnabled = false;
+  let hasStateManagerSetter = false;
+  let isGovernanceEnabled = undefined as boolean | undefined;
 
       // Check if contract has setStateManager function
       try {
@@ -57,28 +56,19 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
         // Function doesn't exist or isn't callable
       }
 
-      // Check if StateManager has governance module for this contract
-      if (CONTRACT_CONFIG.stateManager) {
-        try {
-          const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
-          const governanceModule = await stateManager.getGovernanceModule(address);
-          hasGovernanceModule = governanceModule !== ethers.ZeroAddress;
-          
-          // If has governance module, check if governance is enabled on the contract
-          if (hasGovernanceModule) {
-            const contract = new ethers.Contract(address, ['function isGovernanceEnabled() view returns (bool)'], provider);
-            isGovernanceEnabled = await contract.isGovernanceEnabled();
-          }
-        } catch (error: unknown) {
-          // Governance check failed
-          console.warn('Governance check failed:', error);
-        }
+      // Check if the contract exposes isGovernanceEnabled() — if so, read it.
+      try {
+        const contract = new ethers.Contract(address, ['function isGovernanceEnabled() view returns (bool)'], provider);
+        // call; if function doesn't exist this will throw
+        isGovernanceEnabled = await contract.isGovernanceEnabled();
+      } catch (error: unknown) {
+        // Contract doesn't implement governance toggle or call failed
+        isGovernanceEnabled = undefined;
       }
 
       return { 
         isContract: true, 
         hasStateManagerSetter,
-        hasGovernanceModule,
         isGovernanceEnabled
       };
     } catch {
@@ -97,6 +87,32 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
     try {
       const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
 
+      // Attempt to read DEFAULT_ADMIN_ROLE grants from events to show current admin accounts
+      try {
+        if (typeof (stateManager as any).queryFilter === 'function') {
+          const DEFAULT_ADMIN_ROLE = '0x00000000000000000000000000000000000000000000000000000000000000000';
+          const granted = await (stateManager as any).queryFilter(stateManager.filters.RoleGranted(DEFAULT_ADMIN_ROLE), 0, 'latest');
+          const revoked = await (stateManager as any).queryFilter(stateManager.filters.RoleRevoked(DEFAULT_ADMIN_ROLE), 0, 'latest');
+          const admins = new Set<string>();
+          for (const ev of granted) {
+            try {
+              const account = (ev as any).args?.account ?? (ev as any).args?.[1] ?? null;
+              if (account) admins.add(account);
+            } catch {}
+          }
+          for (const ev of revoked) {
+            try {
+              const account = (ev as any).args?.account ?? (ev as any).args?.[1] ?? null;
+              if (account) admins.delete(account);
+            } catch {}
+          }
+          setAdminAccounts(Array.from(admins));
+        }
+      } catch (e) {
+        // If event queries fail in test mocks or wallets, ignore gracefully
+        console.warn('Failed to read admin Role events:', e);
+        setAdminAccounts([]);
+      }
       // Known registry IDs
       const knownIds = [
         'MAIN_CONTRACT',
@@ -121,8 +137,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           let value: string;
           let isContract = false;
           let hasStateManagerSetter = false;
-          let hasGovernanceModule = false;
-          let isGovernanceEnabled = false;
+          let isGovernanceEnabled: boolean | undefined = undefined;
 
           switch (valueType) {
             case 1: { // ADDRESS
@@ -131,8 +146,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               const contractInfo = await detectContractCapabilities(value, provider);
               isContract = contractInfo.isContract;
               hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
-              hasGovernanceModule = contractInfo.hasGovernanceModule || false;
-              isGovernanceEnabled = contractInfo.isGovernanceEnabled || false;
+              isGovernanceEnabled = contractInfo.isGovernanceEnabled;
               break;
             }
             case 2: { // UINT256
@@ -164,7 +178,6 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
             isImmutable,
             isContract,
             hasStateManagerSetter,
-            hasGovernanceModule,
             isGovernanceEnabled,
           });
         } catch (err) {
@@ -214,7 +227,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
     // Function to toggle governance enabled/disabled for a contract
   const toggleGovernanceEnabled = async (entry: RegistryEntry, enabled: boolean) => {
-    if (!window.ethereum || !entry.isContract || !entry.hasGovernanceModule) {
+    if (!window.ethereum || !entry.isContract || typeof entry.isGovernanceEnabled === 'undefined') {
       setStatus('Cannot toggle governance for this contract.');
       return;
     }
@@ -418,6 +431,23 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
         View and edit registry entries. Immutable entries cannot be modified.
       </Typography>
 
+      {true && (
+        <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ color: 'var(--qerun-text-muted)', mr: 1 }}>Admins:</Typography>
+          <Stack direction="row" spacing={1}>
+            {adminAccounts.map((addr) => (
+              <Tooltip key={addr} title={addr}>
+                <Chip
+                  label={`${addr.slice(0, 6)}...${addr.slice(-4)}`}
+                  size="small"
+                  sx={{ fontSize: '0.75rem', height: 24 }}
+                />
+              </Tooltip>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
       {!hasWallet && (
         <Alert severity="warning" sx={{ mb: 2 }}>No wallet detected. Connect with an admin account to edit registry entries.</Alert>
       )}
@@ -456,7 +486,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                     sx={{ fontSize: '0.7rem', height: '20px' }}
                   />
                 )}
-                {entry.hasGovernanceModule && (
+                {typeof entry.isGovernanceEnabled !== 'undefined' && (
                   <Chip
                     label={entry.isGovernanceEnabled ? "GOVERNANCE ENABLED" : "GOVERNANCE DISABLED"}
                     size="small"
@@ -492,14 +522,14 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                     </IconButton>
                   </Tooltip>
                 )}
-                {entry.hasGovernanceModule && (
+                {typeof entry.isGovernanceEnabled !== 'undefined' && (
                   <Tooltip title={entry.isGovernanceEnabled ? 'Governance is enabled - Click to disable' : 'Governance is disabled - Click to enable'}>
                     <FormControlLabel
                       control={
                         <Switch
                           size="small"
-                          checked={entry.isGovernanceEnabled}
-                                                    onChange={() => toggleGovernanceEnabled(entry, !entry.isGovernanceEnabled)}
+                          checked={!!entry.isGovernanceEnabled}
+                          onChange={() => toggleGovernanceEnabled(entry, !entry.isGovernanceEnabled)}
                           disabled={loading}
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
