@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ethers, isAddress } from 'ethers';
 import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem, Switch, FormControlLabel } from '@mui/material';
+import ContentCopy from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -16,6 +17,7 @@ interface RegistryEntry {
   isContract?: boolean;
   hasStateManagerSetter?: boolean;
   isGovernanceEnabled?: boolean;
+  contractStateManager?: string | null;
 }
 
 interface RegistryManagerProps {
@@ -35,7 +37,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
   // Helper function to detect if address is a contract and has setStateManager function
-  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, isGovernanceEnabled?: boolean}> => {
+  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, isGovernanceEnabled?: boolean, contractStateManager?: string | null}> => {
     try {
       const code = await provider.getCode(address);
       if (code === '0x') {
@@ -44,6 +46,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
   let hasStateManagerSetter = false;
   let isGovernanceEnabled = undefined as boolean | undefined;
+  let contractStateManager: string | null | undefined = undefined;
 
       // Check if contract has setStateManager function by looking for the selector in runtime bytecode
       try {
@@ -55,11 +58,19 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
         // ignore selector check failures
       }
 
+      // Try to read a public stateManager() getter if present
+      try {
+        const contract = new ethers.Contract(address, ['function stateManager() view returns (address)'], provider);
+        contractStateManager = await contract.stateManager();
+      } catch (err) {
+        contractStateManager = null; // not present or failed
+      }
+
       // Check if the contract exposes isGovernanceEnabled() — if so, read it.
       try {
-        const contract = new ethers.Contract(address, ['function isGovernanceEnabled() view returns (bool)'], provider);
+        const contract2 = new ethers.Contract(address, ['function isGovernanceEnabled() view returns (bool)'], provider);
         // call; if function doesn't exist this will throw
-        isGovernanceEnabled = await contract.isGovernanceEnabled();
+        isGovernanceEnabled = await contract2.isGovernanceEnabled();
       } catch (error: unknown) {
         // Contract doesn't implement governance toggle or call failed
         isGovernanceEnabled = undefined;
@@ -68,7 +79,8 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       return { 
         isContract: true, 
         hasStateManagerSetter,
-        isGovernanceEnabled
+        isGovernanceEnabled,
+        contractStateManager
       };
     } catch {
       return { isContract: false };
@@ -137,6 +149,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           let isContract = false;
           let hasStateManagerSetter = false;
           let isGovernanceEnabled: boolean | undefined = undefined;
+          let contractStateManager: string | null | undefined = undefined;
 
           switch (valueType) {
             case 1: { // ADDRESS
@@ -146,6 +159,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               isContract = contractInfo.isContract;
               hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
               isGovernanceEnabled = contractInfo.isGovernanceEnabled;
+              contractStateManager = contractInfo.contractStateManager ?? null;
               // Debug: log detected capability for developer verification
               // eslint-disable-next-line no-console
               console.debug(`RegistryManager: ${id} -> isContract=${isContract}, hasStateManagerSetter=${hasStateManagerSetter}, isGovernanceEnabled=${String(isGovernanceEnabled)}`);
@@ -181,6 +195,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
             isContract,
             hasStateManagerSetter,
             isGovernanceEnabled,
+            contractStateManager,
           });
         } catch (err) {
           console.warn(`Failed to load registry entry ${id}:`, err);
@@ -597,6 +612,42 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
               >
                 {formatValue(entry.value, entry.valueType)}
               </Typography>
+            )}
+
+            {/* Show detected contract state manager address when available */}
+            {entry.contractStateManager && ethers.isAddress(entry.contractStateManager) && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" sx={{ color: 'var(--qerun-text-muted)' }}>StateManager:</Typography>
+                <Tooltip title={entry.contractStateManager}>
+                  <Chip
+                    label={`${entry.contractStateManager.slice(0, 6)}...${entry.contractStateManager.slice(-4)}`}
+                    size="small"
+                    sx={{ fontSize: '0.75rem', height: 24 }}
+                  />
+                </Tooltip>
+                <Tooltip title="Copy address">
+                  <IconButton
+                    size="small"
+                    onClick={async () => {
+                      try {
+                        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                          await navigator.clipboard.writeText(entry.contractStateManager as string);
+                          setStatus('StateManager address copied to clipboard');
+                          setTimeout(() => setStatus(null), 2000);
+                        } else {
+                          setStatus('Clipboard not available in this environment');
+                          setTimeout(() => setStatus(null), 2000);
+                        }
+                      } catch (err) {
+                        setStatus('Failed to copy address');
+                        setTimeout(() => setStatus(null), 2000);
+                      }
+                    }}
+                  >
+                    <ContentCopy fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             )}
           </Box>
         ))}
