@@ -6,6 +6,7 @@ import StateManagerAbi from '../abi/StateManager.json';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
 import { useAccount } from 'wagmi';
 import RegistryManager from './RegistryManager';
+import TokenMinter from './TokenMinter';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -341,6 +342,10 @@ const AdminPanel: React.FC = () => {
 
       <Box sx={{ mt: 3 }}>
         <RegistryManager hasWallet={hasWallet} />
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <TokenMinter />
       </Box>
 
       <Box sx={{ mt: 3, p: 2, borderRadius: 2, border: '1px solid var(--qerun-gold-alpha-18)' }}>

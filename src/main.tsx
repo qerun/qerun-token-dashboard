@@ -19,7 +19,7 @@ const fallbackExplorerUrl = import.meta.env.VITE_CHAIN_EXPLORER_URL as string | 
 
 const baseChains = [mainnet, sepolia] as const;
 const customChain =
-  Number.isFinite(chainId) && !baseChains.some(chain => chain.id === chainId)
+  chainId !== undefined && Number.isFinite(chainId) && !baseChains.some(chain => chain.id === chainId)
     ? defineChain({
         id: chainId,
         name: `Chain ${chainId}`,

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ethers, isAddress } from 'ethers';
-import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem } from '@mui/material';
+import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem, Switch, FormControlLabel } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import StateManagerAbi from '../abi/StateManager.json';
+import TokenAbi from '../abi/Token.json';
+import SwapAbi from '../abi/Swap.json';
+import TreasuryAbi from '../abi/Treasury.json';
 import { CONTRACT_CONFIG } from '../config';
 
 interface RegistryEntry {
@@ -13,6 +16,9 @@ interface RegistryEntry {
   valueType: number;
   requiredRole: string;
   isImmutable: boolean;
+  isContract?: boolean;
+  contractType?: 'token' | 'swap' | 'treasury' | 'unknown';
+  governanceEnabled?: boolean;
 }
 
 interface RegistryManagerProps {
@@ -30,9 +36,60 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [newEntryValue, setNewEntryValue] = useState('');
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
+  // Helper function to detect if address is a contract and what type
+  const detectContractType = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, contractType?: 'token' | 'swap' | 'treasury' | 'unknown', governanceEnabled?: boolean}> => {
+    try {
+      const code = await provider.getCode(address);
+      if (code === '0x') {
+        return { isContract: false };
+      }
+
+      // Try to detect contract type by calling methods
+      let contractType: 'token' | 'swap' | 'treasury' | 'unknown' = 'unknown';
+      let governanceEnabled = false;
+
+      try {
+        // Check if it's a Token contract
+        const tokenContract = new ethers.Contract(address, TokenAbi.abi, provider);
+        const tokenGovernance = await tokenContract.governanceEnabled();
+        if (typeof tokenGovernance === 'boolean') {
+          contractType = 'token';
+          governanceEnabled = tokenGovernance;
+        }
+      } catch {
+        try {
+          // Check if it's a Swap contract
+          const swapContract = new ethers.Contract(address, SwapAbi.abi, provider);
+          const swapGovernance = await swapContract.governanceEnabled();
+          if (typeof swapGovernance === 'boolean') {
+            contractType = 'swap';
+            governanceEnabled = swapGovernance;
+          }
+        } catch {
+          try {
+            // Check if it's a Treasury contract
+            const treasuryContract = new ethers.Contract(address, TreasuryAbi.abi, provider);
+            const treasuryGovernance = await treasuryContract.governanceEnabled();
+            if (typeof treasuryGovernance === 'boolean') {
+              contractType = 'treasury';
+              governanceEnabled = treasuryGovernance;
+            }
+          } catch {
+            // Unknown contract type
+            contractType = 'unknown';
+          }
+        }
+      }
+
+      return { isContract: true, contractType, governanceEnabled };
+    } catch {
+      return { isContract: false };
+    }
+  };
+
   const loadRegistry = useCallback(async () => {
-    if (!window.ethereum) {
-      setStatus('Wallet not detected. Connect to load registry.');
+    if (!window.ethereum || !CONTRACT_CONFIG.stateManager) {
+      setStatus('Wallet not detected or StateManager address not configured.');
       return;
     }
 
@@ -62,9 +119,18 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           const requiredRole = metadata[1];
 
           let value: string;
+          let isContract = false;
+          let contractType: 'token' | 'swap' | 'treasury' | 'unknown' | undefined;
+          let governanceEnabled = false;
+
           switch (valueType) {
             case 1: // ADDRESS
               value = await stateManager.addressOf(id);
+              // Check if this address is a contract and get governance status
+              const contractInfo = await detectContractType(value, provider);
+              isContract = contractInfo.isContract;
+              contractType = contractInfo.contractType;
+              governanceEnabled = contractInfo.governanceEnabled || false;
               break;
             case 2: // UINT256
               const uintValue = await stateManager.getUint(id);
@@ -90,6 +156,9 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
             valueType,
             requiredRole,
             isImmutable,
+            isContract,
+            contractType,
+            governanceEnabled,
           });
         } catch (err) {
           console.warn(`Failed to load registry entry ${id}:`, err);
@@ -104,6 +173,56 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       setEntries([]);
     }
   }, []);
+
+  // Function to toggle governance for a contract
+  const toggleGovernance = async (entry: RegistryEntry, enable: boolean) => {
+    if (!window.ethereum || !entry.isContract || !entry.contractType) {
+      setStatus('Cannot toggle governance for this entry.');
+      return;
+    }
+
+    setLoading(true);
+    setStatus(`${enable ? 'Enabling' : 'Disabling'} governance...`);
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      let contract;
+      switch (entry.contractType) {
+        case 'token':
+          contract = new ethers.Contract(entry.value, TokenAbi.abi, signer);
+          if (enable) {
+            await contract.enableGovernance();
+          } else {
+            await contract.disableGovernance();
+          }
+          break;
+        case 'swap':
+          contract = new ethers.Contract(entry.value, SwapAbi.abi, signer);
+          if (enable) {
+            await contract.enableGovernance();
+          } else {
+            await contract.disableGovernance();
+          }
+          break;
+        case 'treasury':
+          contract = new ethers.Contract(entry.value, TreasuryAbi.abi, signer);
+          await contract.setGovernanceEnabled(enable);
+          break;
+        default:
+          throw new Error('Unsupported contract type for governance toggle');
+      }
+
+      setStatus(`Governance ${enable ? 'enabled' : 'disabled'} successfully.`);
+      await loadRegistry(); // Refresh the data
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(`Failed to toggle governance: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadRegistry();
@@ -120,7 +239,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   };
 
   const handleSave = async (entry: RegistryEntry) => {
-    if (!window.ethereum) {
+    if (!window.ethereum || !CONTRACT_CONFIG.stateManager) {
       setStatus('Connect a wallet with admin access to update registry.');
       return;
     }
@@ -176,7 +295,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   };
 
   const handleAddEntry = async () => {
-    if (!window.ethereum || !newEntryId.trim() || !newEntryValue.trim()) {
+    if (!window.ethereum || !CONTRACT_CONFIG.stateManager || !newEntryId.trim() || !newEntryValue.trim()) {
       setStatus('Please fill in all fields.');
       return;
     }
@@ -290,14 +409,51 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
                     sx={{ fontSize: '0.7rem', height: '20px' }}
                   />
                 )}
+                {entry.isContract && (
+                  <Chip
+                    label={`${entry.contractType?.toUpperCase() || 'CONTRACT'}`}
+                    size="small"
+                    color="primary"
+                    sx={{ fontSize: '0.7rem', height: '20px' }}
+                  />
+                )}
               </Box>
-              {!entry.isImmutable && editingId !== entry.id && (
-                <Tooltip title="Edit">
-                  <IconButton size="small" onClick={() => handleEdit(entry)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {!entry.isImmutable && editingId !== entry.id && (
+                  <Tooltip title="Edit">
+                    <IconButton size="small" onClick={() => handleEdit(entry)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {entry.isContract && entry.contractType && entry.contractType !== 'unknown' && (
+                  <Tooltip title={`Governance ${entry.governanceEnabled ? 'Enabled' : 'Disabled'}`}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          size="small"
+                          checked={entry.governanceEnabled || false}
+                          onChange={(e) => toggleGovernance(entry, e.target.checked)}
+                          disabled={loading}
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: 'var(--qerun-gold)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 193, 7, 0.08)',
+                              },
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: 'var(--qerun-gold)',
+                            },
+                          }}
+                        />
+                      }
+                      label=""
+                      sx={{ mr: 0 }}
+                    />
+                  </Tooltip>
+                )}
+              </Box>
             </Box>
 
             {editingId === entry.id ? (

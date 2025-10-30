@@ -45,17 +45,16 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
     const { address: connectedAddress, chainId: connectedChainId } = useAccount();
     const { data: blockNumber } = useBlockNumber({ watch: true });
     const [addresses, setAddresses] = useState<ResolvedAddresses | null>(null);
+    const [usdBalance, setUsdBalance] = useState('0');
+    const [qerBalance, setQerBalance] = useState('0');
     // Metrics are lifted to App via onMetricsUpdate
     const [rate, setRate] = useState('Loading...');
     const [networkWarning, setNetworkWarning] = useState<string | null>(null);
+    const [reserveQer, setReserveQer] = useState<bigint>(0n);
+    const [reserveUsd, setReserveUsd] = useState<bigint>(0n);
     const [feeBps, setFeeBps] = useState<bigint>(0n);
-    const [availablePairs, setAvailablePairs] = useState<string[]>([]);
-    const [fromToken, setFromToken] = useState<string>('');
-    const [toToken, setToToken] = useState<string>('');
-    const [availableTokens, setAvailableTokens] = useState<{address: string, symbol: string}[]>([]);
-    const [balances, setBalances] = useState<Record<string, string>>({});
-    const [decimals, setDecimals] = useState<Record<string, number>>({});
-    const [pairReserves, setPairReserves] = useState<Record<string, {reserveQer: bigint, reserveQuote: bigint}>>({});
+    const [usdDecimals, setUsdDecimals] = useState(18);
+    const [qerDecimals, setQerDecimals] = useState(18);
     const loadState = useCallback(async () => {
         if (!window.ethereum) return;
         const provider = new ethers.BrowserProvider(window.ethereum);
@@ -66,13 +65,10 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             const warn = `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_CONFIG.chainId}.`;
             setNetworkWarning(warn);
             setAddresses(null);
-            setAvailableTokens([]);
-            setBalances({});
-            setDecimals({});
-            setPairReserves({});
+            setUsdBalance('0');
+            setQerBalance('0');
             // metrics cleared via callback above
             setRate('Wrong network');
-            setAvailablePairs([]);
             onMetricsUpdate?.({
                 swapUsdBalance: '0',
                 swapQerBalance: '0',
@@ -88,7 +84,10 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
 
         let resolved: ResolvedAddresses;
         try {
-            const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager!, StateManagerAbi.abi, provider);
+            if (!CONTRACT_CONFIG.stateManager) {
+                throw new Error('StateManager address not configured');
+            }
+            const stateManager = new ethers.Contract(CONTRACT_CONFIG.stateManager, StateManagerAbi.abi, provider);
             const addressOf = stateManager.getFunction('addressOf');
             const hasEntry = (() => {
                 try {
@@ -140,11 +139,6 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             console.error('Failed to resolve contract addresses from StateManager', error);
             setAddresses(null);
             setNetworkWarning('Unable to load contract addresses from StateManager. Check deployment configuration.');
-            setAvailablePairs([]);
-            setAvailableTokens([]);
-            setBalances({});
-            setDecimals({});
-            setPairReserves({});
             return;
         }
 
@@ -158,48 +152,8 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
         ]);
         const usdDec = Number(usdDecRaw);
         const qerDec = Number(qerDecRaw);
-
-        // Fetch symbols
-        const qerSymbol = await qerToken.symbol().catch(() => 'QER');
-        const usdSymbol = await usdToken.symbol().catch(() => 'USD');
-
-        const tokens = [{address: qerTokenAddress, symbol: qerSymbol}, {address: usdTokenAddress, symbol: usdSymbol}];
-        for (const pairAddr of availablePairs) {
-            if (pairAddr === usdTokenAddress) continue;
-            const token = new ethers.Contract(pairAddr, ERC20_ABI, provider);
-            const symbol = await token.symbol().catch(() => pairAddr.slice(0,6) + '...');
-            tokens.push({address: pairAddr, symbol});
-        }
-        setAvailableTokens(tokens);
-
-        // Set initial from/to
-        setFromToken(qerTokenAddress);
-        setToToken(usdTokenAddress);
-
-        // Fetch decimals
-        const decs: Record<string, number> = {};
-        decs[qerTokenAddress] = qerDec;
-        decs[usdTokenAddress] = usdDec;
-        for (const token of tokens) {
-            if (!decs[token.address]) {
-                const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-                decs[token.address] = Number(await contract.decimals().catch(() => 18));
-            }
-        }
-        setDecimals(decs);
-
-        // Fetch balances
-        if (activeAccount) {
-            const bals: Record<string, string> = {};
-            for (const token of tokens) {
-                const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-                const balance = await contract.balanceOf(activeAccount);
-                bals[token.address] = ethers.formatUnits(balance, decs[token.address]);
-            }
-            setBalances(bals);
-        } else {
-            setBalances({});
-        }
+        setUsdDecimals(usdDec);
+        setQerDecimals(qerDec);
 
         const [swapUsd, swapQer, usdSupply, qerSupply] = await Promise.all([
             usdToken.balanceOf(swapAddress),
@@ -218,7 +172,11 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 usdToken.balanceOf(activeAccount),
                 qerToken.balanceOf(activeAccount),
             ]);
-            // balances already set in the loop
+            setUsdBalance(ethers.formatUnits(usd, usdDec));
+            setQerBalance(ethers.formatUnits(qer, qerDec));
+        } else {
+            setUsdBalance('0');
+            setQerBalance('0');
         }
 
         const swap = new ethers.Contract(swapAddress, SwapAbi.abi, provider);
@@ -226,6 +184,8 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
         try {
             const [reserveQerRaw, reserveUsdRaw]: [bigint, bigint] = await swap.getReserves(usdTokenAddress);
             const currentFeeBps: bigint = await swap.feeBps();
+            setReserveQer(reserveQerRaw);
+            setReserveUsd(reserveUsdRaw);
             setFeeBps(currentFeeBps);
             if (reserveQerRaw > 0n && reserveUsdRaw > 0n) {
                 const usdPerQer =
@@ -241,30 +201,12 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 setRate(nextRate);
             }
         } catch {
-            nextRate = 'Pair data unavailable';
+            nextRate = 'Pair not registered';
             setRate(nextRate);
+            setReserveQer(0n);
+            setReserveUsd(0n);
             setFeeBps(0n);
         }
-
-        try {
-            const pairs: string[] = await swap.allPairs();
-            const normalised = pairs.map(addr => ethers.getAddress(addr));
-            setAvailablePairs(normalised);
-        } catch {
-            setAvailablePairs([]);
-        }
-
-        // Fetch pair reserves
-        const reserves: Record<string, {reserveQer: bigint, reserveQuote: bigint}> = {};
-        for (const pairAddr of availablePairs) {
-            try {
-                const [reserveQerRaw, reserveQuoteRaw]: [bigint, bigint] = await swap.getReserves(pairAddr);
-                reserves[pairAddr] = {reserveQer: reserveQerRaw, reserveQuote: reserveQuoteRaw};
-            } catch {
-                reserves[pairAddr] = {reserveQer: 0n, reserveQuote: 0n};
-            }
-        }
-        setPairReserves(reserves);
 
         onMetricsUpdate?.({
             swapUsdBalance: nextSwapUsd,
@@ -280,40 +222,34 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
     }, [blockNumber, loadState, refreshKey]);
 
     const estimateAmountOut = useCallback(
-        (inputAmount: bigint, fromAddress: string, toAddress: string): bigint => {
-            if (inputAmount === 0n) return 0n;
+        (inputAmount: bigint, source: 'USD' | 'QER'): bigint => {
+            if (inputAmount === 0n || reserveQer === 0n || reserveUsd === 0n) return 0n;
             const effectiveFee = feeBps > BPS ? BPS : feeBps;
             const amountInWithFee = (inputAmount * (BPS - effectiveFee)) / BPS;
             if (amountInWithFee === 0n) return 0n;
-            if (fromAddress === addresses?.qer && pairReserves[toAddress]) {
-                const res = pairReserves[toAddress];
-                if (res.reserveQer === 0n || res.reserveQuote === 0n) return 0n;
-                return (amountInWithFee * res.reserveQuote) / (res.reserveQer + amountInWithFee);
-            } else if (toAddress === addresses?.qer && pairReserves[fromAddress]) {
-                const res = pairReserves[fromAddress];
-                if (res.reserveQer === 0n || res.reserveQuote === 0n) return 0n;
-                return (amountInWithFee * res.reserveQer) / (res.reserveQuote + amountInWithFee);
-            } else {
-                return 0n;
+            if (source === 'USD') {
+                const denominator = reserveUsd + amountInWithFee;
+                if (denominator === 0n) return 0n;
+                return (amountInWithFee * reserveQer) / denominator;
             }
+            const denominator = reserveQer + amountInWithFee;
+            if (denominator === 0n) return 0n;
+            return (amountInWithFee * reserveUsd) / denominator;
         },
-        [feeBps, addresses?.qer, pairReserves],
+        [feeBps, reserveQer, reserveUsd],
     );
 
-    const handleFromTokenChange = (value: string) => {
+    const [fromToken, setFromToken] = useState<'USD' | 'QER'>('USD');
+    const [toToken, setToToken] = useState<'USD' | 'QER'>('QER');
+
+    const handleFromTokenChange = (value: 'USD' | 'QER') => {
         setFromToken(value);
-        if (toToken === value) {
-            const other = availableTokens.find(t => t.address !== value);
-            setToToken(other ? other.address : '');
-        }
+        setToToken(value === 'USD' ? 'QER' : 'USD');
     };
 
-    const handleToTokenChange = (value: string) => {
+    const handleToTokenChange = (value: 'USD' | 'QER') => {
         setToToken(value);
-        if (fromToken === value) {
-            const other = availableTokens.find(t => t.address !== value);
-            setFromToken(other ? other.address : '');
-        }
+        setFromToken(value === 'USD' ? 'QER' : 'USD');
     };
 
 
@@ -327,9 +263,9 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
         const swapAmount = parseFloat(amount);
         if (isNaN(swapAmount) || swapAmount <= 0) return false;
 
-        const userBalance = parseFloat(balances[fromToken] || '0');
+        const userBalance = fromToken === 'USD' ? parseFloat(usdBalance) : parseFloat(qerBalance);
         return userBalance < swapAmount;
-    }, [amount, fromToken, balances]);
+    }, [amount, fromToken, usdBalance, qerBalance]);
 
     const handleSwap = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -350,17 +286,31 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 alert('Contract addresses not loaded yet');
                 return;
             }
-            const { swap: swapAddress } = addresses;
+            const { swap: swapAddress, usd: usdTokenAddress, qer: qerTokenAddress } = addresses;
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(swapAddress, SwapAbi.abi, signer);
-            const fromDecimals = decimals[fromToken] || 18;
+            const fromDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
             const amountIn = ethers.parseUnits(amount, fromDecimals);
-            const expectedOut = estimateAmountOut(amountIn, fromToken, toToken);
+            const expectedOut = estimateAmountOut(amountIn, fromToken);
             const minAmountOut = expectedOut > 0n ? (expectedOut * 98n) / 100n : 0n;
 
-            const tx = await contract.swap(fromToken, toToken, amountIn, minAmountOut);
-            await tx.wait?.();
+            if (fromToken === 'USD') {
+                const usdToken = new ethers.Contract(usdTokenAddress, ERC20_ABI, signer);
+                const approveTx = await usdToken.approve(swapAddress, amountIn);
+                await approveTx.wait?.();
+                const swapTx = await contract.swapQuoteForQer(usdTokenAddress, amountIn, minAmountOut);
+                await swapTx.wait?.();
+            } else if (fromToken === 'QER') {
+                const qerToken = new ethers.Contract(qerTokenAddress, ERC20_ABI, signer);
+                const approveTx = await qerToken.approve(swapAddress, amountIn);
+                await approveTx.wait?.();
+                const swapTx = await contract.swapQerForQuote(usdTokenAddress, amountIn, minAmountOut);
+                await swapTx.wait?.();
+            } else {
+                alert('Invalid token pair');
+                return;
+            }
 
             alert('Swap confirmed on-chain. Balances updated.');
             setAmount('');
@@ -407,29 +357,6 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
             <Typography variant="h6" sx={{ m: 0, color: 'var(--qerun-text-light)' }}>{rate}</Typography>
           </Paper>
 
-          <Paper variant="outlined" sx={{ p: 2, background: 'var(--qerun-card)' }}>
-            <Typography variant="caption" sx={{ color: 'var(--qerun-gold)' }}>Available Pairs ({availablePairs.length})</Typography>
-            {availablePairs.length === 0 ? (
-              <Typography variant="body2" sx={{ mt: 1, color: 'var(--qerun-text-muted)' }}>No pairs registered yet.</Typography>
-            ) : (
-              <Stack component="ul" sx={{ pl: 2, mt: 1 }}>
-                {availablePairs.map((address) => (
-                  <Box component="li" key={address} sx={{
-                    '& code': {
-                      wordBreak: 'break-all',
-                      whiteSpace: 'normal',
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                      fontSize: '0.875rem',
-                      color: 'var(--qerun-text-light)'
-                    }
-                  }}>
-                    <code>{address}</code>
-                  </Box>
-                ))}
-              </Stack>
-            )}
-          </Paper>
-
           <Stack spacing={2}>
             <FormControl fullWidth>
               <InputLabel id="from-token-label">From token</InputLabel>
@@ -437,11 +364,10 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 labelId="from-token-label"
                 label="From token"
                 value={fromToken}
-                onChange={(e) => handleFromTokenChange(e.target.value)}
+                onChange={(e) => handleFromTokenChange(e.target.value as 'USD' | 'QER')}
               >
-                {availableTokens.map(token => (
-                  <MenuItem key={token.address} value={token.address}>{token.symbol}</MenuItem>
-                ))}
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="QER">QER</MenuItem>
               </Select>
             </FormControl>
 
@@ -451,17 +377,16 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 labelId="to-token-label"
                 label="To token"
                 value={toToken}
-                onChange={(e) => handleToTokenChange(e.target.value)}
+                onChange={(e) => handleToTokenChange(e.target.value as 'USD' | 'QER')}
               >
-                {availableTokens.map(token => (
-                  <MenuItem key={token.address} value={token.address}>{token.symbol}</MenuItem>
-                ))}
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="QER">QER</MenuItem>
               </Select>
             </FormControl>
 
             <TextField
               type="number"
-              label={`Amount in ${availableTokens.find(t => t.address === fromToken)?.symbol || 'token'}`}
+              label={`Amount in ${fromToken}`}
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -469,49 +394,47 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
               fullWidth
             />
             <Typography variant="caption" align="right" sx={{ color: 'var(--qerun-text-muted)' }}>
-              Balance: {balances[fromToken] || '0'} {availableTokens.find(t => t.address === fromToken)?.symbol || ''}
+              Balance: {fromToken === 'USD' ? `${usdBalance} USD` : `${qerBalance} QER`}
             </Typography>
 
             {amount && parseFloat(amount) > 0 && (
               <Box sx={{ color: 'var(--qerun-text-muted)', fontSize: 14 }}>
                 Estimated: {(() => {
                   const numAmount = parseFloat(amount);
-                  const inputDecimals = decimals[fromToken] || 18;
-                  const outputDecimals = decimals[toToken] || 18;
-                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken, toToken);
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                  const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
                   return ethers.formatUnits(estimatedBigInt, outputDecimals);
-                })()} {availableTokens.find(t => t.address === toToken)?.symbol || ''}
+                })()} {toToken}
                 <br />
                 Min received: {(() => {
                   const numAmount = parseFloat(amount);
-                  const inputDecimals = decimals[fromToken] || 18;
-                  const outputDecimals = decimals[toToken] || 18;
-                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken, toToken);
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
+                  const outputDecimals = toToken === 'USD' ? usdDecimals : qerDecimals;
+                  const estimatedBigInt = estimateAmountOut(ethers.parseUnits(numAmount.toString(), inputDecimals), fromToken);
                   const minBigInt = estimatedBigInt > 0n ? (estimatedBigInt * 98n) / 100n : 0n;
                   return ethers.formatUnits(minBigInt, outputDecimals);
-                })()} {availableTokens.find(t => t.address === toToken)?.symbol || ''} (2% slippage)
+                })()} {toToken} (2% slippage)
                 <br />
                 Price impact: {(() => {
                   const numAmount = parseFloat(amount);
                   if (numAmount <= 0) return '0.00%';
-                  const inputDecimals = decimals[fromToken] || 18;
+                  const inputDecimals = fromToken === 'USD' ? usdDecimals : qerDecimals;
                   const inputAmount = ethers.parseUnits(numAmount.toString(), inputDecimals);
                   
                   // Contract-style price impact calculation: (amountIn * BPS) / (reserve + amountIn)
                   const BPS = 10000n;
                   let impact: number;
-                  if (fromToken === addresses?.qer && pairReserves[toToken]) {
-                    const res = pairReserves[toToken];
-                    impact = Number((inputAmount * BPS) / (res.reserveQer + inputAmount));
-                  } else if (toToken === addresses?.qer && pairReserves[fromToken]) {
-                    const res = pairReserves[fromToken];
-                    impact = Number((inputAmount * BPS) / (res.reserveQuote + inputAmount));
+                  if (fromToken === 'QER') {
+                    // QER->USD swap: impact = (qerAmount * BPS) / (qerReserve + qerAmount)
+                    impact = Number((inputAmount * BPS) / (reserveQer + inputAmount));
                   } else {
-                    impact = 0;
+                    // USD->QER swap: impact = (usdAmount * BPS) / (usdReserve + usdAmount)
+                    impact = Number((inputAmount * BPS) / (reserveUsd + inputAmount));
                   }
                   
                   const impactPercent = impact / 100;
-                  const willBeBlocked = fromToken === addresses?.qer && impactPercent > 0.5;
+                  const willBeBlocked = fromToken === 'QER' && impactPercent > 0.5;
                   
                   return impactPercent.toFixed(2) + '% ' + (willBeBlocked ? '(BLOCKED by governance)' : '');
                 })()}
@@ -520,7 +443,7 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
 
             {hasInsufficientBalance && (
               <Alert severity="error">
-                Insufficient {availableTokens.find(t => t.address === fromToken)?.symbol || 'token'} balance. You have {balances[fromToken] || '0'} {availableTokens.find(t => t.address === fromToken)?.symbol || 'token'}.
+                Insufficient {fromToken} balance. You have {fromToken === 'USD' ? usdBalance : qerBalance} {fromToken}.
               </Alert>
             )}
           </Stack>
