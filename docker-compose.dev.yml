@@ -1,0 +1,20 @@
+services:
+  dashboard-dev:
+    image: node:20
+    container_name: qerun-token-dashboard-dev
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      # sensible defaults; override with your host env when needed
+      CHAIN_ID: "97"
+      STATE_MANAGER_ADDRESS: "0xa622B3D86Ef65A7c7fd3723500CDDDF741F5E2e9"
+    # Mount project into container so edits are live
+    volumes:
+      - ./:/app:cached
+      # keep node_modules inside the container (avoid host/OS mismatch)
+      - /app/node_modules
+    ports:
+      - "5173:5173" # vite dev server
+    command: sh -c "npm ci --silent && npm run dev"
+    stdin_open: true
+    tty: true
