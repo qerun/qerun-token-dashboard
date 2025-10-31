@@ -8,6 +8,8 @@ services:
       # sensible defaults; override with your host env when needed
       CHAIN_ID: "97"
       STATE_MANAGER_ADDRESS: "0xa622B3D86Ef65A7c7fd3723500CDDDF741F5E2e9"
+      # ensure Vite binds to all interfaces so the host can reach the dev server
+      VITE_HOST: "0.0.0.0"
     # Mount project into container so edits are live
     volumes:
       - ./:/app:cached
@@ -15,6 +17,7 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173" # vite dev server
-    command: sh -c "npm ci --silent && npm run dev"
+  # run Vite bound to 0.0.0.0 so it's reachable from host/other containers
+  command: sh -c "npm ci --silent && npm run dev -- --host 0.0.0.0"
     stdin_open: true
     tty: true
