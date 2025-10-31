@@ -25,14 +25,26 @@ vi.mock('ethers', () => ({
         }
         return '0x';
       }),
+      // add getSigner for mint operations in tests
+      getSigner: () => ({
+        getAddress: async () => '0xCAFEBABE00000000000000000000000000000000',
+      }),
     })),
     Contract: class MockContract {
-      has = vi.fn().mockResolvedValue(true);
-      addressOf = vi.fn().mockImplementation((id) => {
-        if (id === 'MAIN_CONTRACT') return '0x123';
-        if (id === 'PRIMARY_QUOTE') return '0x456';
-        return '0x0000000000000000000000000000000000000000';
-      });
+      constructor(address: string) {
+        // Provide different behavior depending on which contract is instantiated
+        if (address === '0xstateManager') {
+          (this as any).has = vi.fn().mockResolvedValue(true);
+          (this as any).addressOf = vi.fn().mockImplementation((id: string) => {
+            if (id === 'MAIN_CONTRACT') return '0x123';
+            if (id === 'PRIMARY_QUOTE') return '0x456';
+            return '0x0000000000000000000000000000000000000000';
+          });
+        } else if (address === '0x456') {
+          // Token contract mock with mint
+          (this as any).mint = vi.fn().mockResolvedValue({ wait: vi.fn().mockResolvedValue({}) });
+        }
+      }
     },
     ZeroAddress: '0x0000000000000000000000000000000000000000',
   },
@@ -87,6 +99,18 @@ describe('NetworkManager', () => {
     expect(screen.getByText('Switch to BSC Testnet')).toBeInTheDocument();
     expect(screen.getByText('Add QER Token')).toBeInTheDocument();
     expect(screen.getByText('Add USDQ Token')).toBeInTheDocument();
+    expect(screen.getByText('Fund me 200 USDQ (test)')).toBeInTheDocument();
+  });
+
+  it('mints 200 USDQ to the connected wallet when Fund button clicked', async () => {
+    const user = userEvent.setup();
+    render(<NetworkManager />);
+
+    const fundButton = screen.getByText('Fund me 200 USDQ (test)');
+    await user.click(fundButton);
+
+    // Expect success alert to be shown
+    expect(window.alert).toHaveBeenCalledWith('200 USDQ has been minted to your wallet (test only).');
   });
 
   it('calls switchToNetwork when Switch button is clicked', async () => {
