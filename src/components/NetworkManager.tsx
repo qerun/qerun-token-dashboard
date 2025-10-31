@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button, Stack } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { addTokenToWallet, switchToNetwork, getNetworkName } from '../utils/wallet';
-import type { TokenInfo } from '../utils/wallet';
+import { switchToNetwork, getNetworkName } from '../utils/wallet';
 import { CONTRACT_CONFIG, REGISTRY_IDS } from '../config';
 import { ethers } from 'ethers';
 import StateManagerAbi from '../abi/StateManager.json';
@@ -53,81 +52,7 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
     }
   };
 
-  const handleAddQER = async () => {
-    // Resolve QER token address strictly from StateManager. Do not fall back to config.
-    if (!CONTRACT_CONFIG.stateManager) {
-      alert('StateManager is not configured for this build. Cannot resolve MAIN_CONTRACT.')
-      return
-    }
-
-    try {
-      const provider = new ethers.BrowserProvider((window as any).ethereum as any);
-      const sm = new ethers.Contract(CONTRACT_CONFIG.stateManager as string, StateManagerAbi.abi, provider as any);
-      const has = await sm.has(REGISTRY_IDS.MAIN_CONTRACT);
-      if (!has) {
-        alert('Could not find QER token address in StateManager')
-        return
-      }
-      const addr = await sm.addressOf(REGISTRY_IDS.MAIN_CONTRACT);
-      if (!addr || addr === ethers.ZeroAddress) {
-        alert('Could not find QER token address in StateManager')
-        return
-      }
-
-      const { symbol, decimals } = await fetchTokenMetadata(addr, provider);
-
-      const tokenToAdd: TokenInfo = {
-        address: addr,
-        symbol,
-        decimals,
-        image: undefined, // No image
-      }
-
-      const success = await addTokenToWallet(tokenToAdd);
-      if (success) alert('QER token added to wallet!')
-    } catch (err) {
-      console.error('Failed to resolve QER address from StateManager', err)
-      alert('Failed to resolve QER address from StateManager')
-    }
-  };
-
-  const handleAddUSDQ = async () => {
-    // Require StateManager to provide the PRIMARY_QUOTE address. Do not fall back to config.
-    if (!CONTRACT_CONFIG.stateManager) {
-      alert('StateManager is not configured for this build. Cannot resolve PRIMARY_QUOTE.')
-      return
-    }
-
-    try {
-      const provider = new ethers.BrowserProvider((window as any).ethereum as any);
-      const sm = new ethers.Contract(CONTRACT_CONFIG.stateManager as string, StateManagerAbi.abi, provider as any);
-      const has = await sm.has(REGISTRY_IDS.PRIMARY_QUOTE);
-      if (!has) {
-        alert("Couldn't find the quote address in StateManager")
-        return
-      }
-      const quoteAddr = await sm.addressOf(REGISTRY_IDS.PRIMARY_QUOTE);
-      if (!quoteAddr || quoteAddr === ethers.ZeroAddress) {
-        alert("Couldn't find the quote address in StateManager")
-        return
-      }
-
-      const { symbol, decimals } = await fetchTokenMetadata(quoteAddr, provider);
-
-      const tokenToAdd: TokenInfo = {
-        address: quoteAddr,
-        symbol,
-        decimals,
-        image: undefined, // No image
-      }
-
-      const success = await addTokenToWallet(tokenToAdd);
-      if (success) alert('USDQ token added to wallet!')
-    } catch (err) {
-      console.error('Failed to resolve PRIMARY_QUOTE from StateManager', err)
-      alert('Failed to resolve PRIMARY_QUOTE from StateManager')
-    }
-  };
+  
 
   const handleFundMeUSDQ = async () => {
     // Send/mint 200 USDQ to the connected wallet using the Token.mint function.
