@@ -11,7 +11,7 @@ RUN npm run build && npm prune --omit=dev
 # Final stage
 FROM node:20-alpine
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV PORT=8080
 ENV CHAIN_ID=97
 ENV STATE_MANAGER_ADDRESS=0xa622B3D86Ef65A7c7fd3723500CDDDF741F5E2e9

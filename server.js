@@ -17,8 +17,8 @@ app.use(express.static(distDir))
 function getRuntimeConfig() {
   // Only expose needed variables to the client
   const cfg = {
-    VITE_STATE_MANAGER_ADDRESS: process.env.VITE_STATE_MANAGER_ADDRESS,
-    VITE_CHAIN_ID: process.env.VITE_CHAIN_ID,
+    STATE_MANAGER_ADDRESS: process.env.STATE_MANAGER_ADDRESS,
+    CHAIN_ID: process.env.CHAIN_ID,
   }
   // Remove undefined to keep the payload clean
   return Object.fromEntries(

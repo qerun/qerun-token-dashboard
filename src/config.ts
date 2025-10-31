@@ -7,10 +7,10 @@ declare global {
 
 const makeId = (label: string) => label;
 
-const rawChainId = window.__RUNTIME_CONFIG?.VITE_CHAIN_ID || (typeof process !== 'undefined' ? process.env.VITE_CHAIN_ID : undefined);
+const rawChainId = window.__RUNTIME_CONFIG?.CHAIN_ID || (typeof process !== 'undefined' ? process.env.CHAIN_ID : undefined);
 
 export const CONTRACT_CONFIG = {
-  stateManager: window.__RUNTIME_CONFIG?.VITE_STATE_MANAGER_ADDRESS || (typeof process !== 'undefined' ? process.env.VITE_STATE_MANAGER_ADDRESS : undefined),
+  stateManager: window.__RUNTIME_CONFIG?.STATE_MANAGER_ADDRESS || (typeof process !== 'undefined' ? process.env.STATE_MANAGER_ADDRESS : undefined),
   chainId: rawChainId,
 } as const;
 

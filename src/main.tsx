@@ -11,11 +11,11 @@ import { CONTRACT_CONFIG } from './config';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const walletConnectProjectId =
-  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? 'd9f61ed66163e5f8c12e1c7d633792a6';
+  import.meta.env.WALLETCONNECT_PROJECT_ID ?? 'd9f61ed66163e5f8c12e1c7d633792a6';
 
 const chainId = CONTRACT_CONFIG.chainId ? Number.parseInt(CONTRACT_CONFIG.chainId, 10) : undefined;
-const fallbackRpcUrl = import.meta.env.VITE_CHAIN_RPC_URL ?? 'http://127.0.0.1:8545';
-const fallbackExplorerUrl = import.meta.env.VITE_CHAIN_EXPLORER_URL as string | undefined;
+const fallbackRpcUrl = import.meta.env.CHAIN_RPC_URL ?? 'http://127.0.0.1:8545';
+const fallbackExplorerUrl = import.meta.env.CHAIN_EXPLORER_URL as string | undefined;
 
 const baseChains = [mainnet, sepolia] as const;
 const customChain =

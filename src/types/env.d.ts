@@ -1,7 +1,7 @@
 interface ImportMetaEnv {
-  readonly VITE_SWAP_ADDRESS?: string;
-  readonly VITE_STATE_MANAGER_ADDRESS?: string;
-  readonly VITE_CHAIN_ID?: string;
+  readonly SWAP_ADDRESS?: string;
+  readonly STATE_MANAGER_ADDRESS?: string;
+  readonly CHAIN_ID?: string;
 }
 
 interface ImportMeta {
