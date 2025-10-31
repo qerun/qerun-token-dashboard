@@ -61,9 +61,10 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
         const network = await provider.getNetwork();
         const chainId = network?.chainId?.toString();
 
-        if (chainId !== CONTRACT_CONFIG.chainId) {
-            const warn = `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_CONFIG.chainId}.`;
-            setNetworkWarning(warn);
+    // If CONTRACT_CONFIG.chainId is not configured, don't enforce a network check here.
+    if (CONTRACT_CONFIG.chainId && chainId !== CONTRACT_CONFIG.chainId) {
+      const warn = `Connected network ${chainId ?? 'unknown'} is wrong. Please switch to chain ${CONTRACT_CONFIG.chainId}.`;
+      setNetworkWarning(warn);
             setAddresses(null);
             setUsdBalance('0');
             setQerBalance('0');
@@ -366,8 +367,8 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 value={fromToken}
                 onChange={(e) => handleFromTokenChange(e.target.value as 'USD' | 'QER')}
               >
-                <MenuItem value="USD">USD</MenuItem>
-                <MenuItem value="QER">QER</MenuItem>
+                <MenuItem value="USD">USD — {usdBalance} USD</MenuItem>
+                <MenuItem value="QER">QER — {qerBalance} QER</MenuItem>
               </Select>
             </FormControl>
 
@@ -379,8 +380,8 @@ const Swap: React.FC<SwapProps> = ({ refreshKey, onMetricsUpdate }) => {
                 value={toToken}
                 onChange={(e) => handleToTokenChange(e.target.value as 'USD' | 'QER')}
               >
-                <MenuItem value="USD">USD</MenuItem>
-                <MenuItem value="QER">QER</MenuItem>
+                <MenuItem value="USD">USD — {usdBalance} USD</MenuItem>
+                <MenuItem value="QER">QER — {qerBalance} QER</MenuItem>
               </Select>
             </FormControl>
 

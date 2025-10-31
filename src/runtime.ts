@@ -3,6 +3,6 @@
 
 if (typeof window !== 'undefined') {
   window.__RUNTIME_CONFIG = Object.fromEntries(
-    Object.entries(import.meta.env).filter(([key]) => key.startsWith('VITE_'))
+    Object.entries(import.meta.env).filter(([key]) => key.startsWith(''))
   );
 }

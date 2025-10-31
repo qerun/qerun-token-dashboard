@@ -17,14 +17,18 @@ app.use(express.static(distDir))
 function getRuntimeConfig() {
   // Only expose needed variables to the client
   const cfg = {
-    VITE_STATE_MANAGER_ADDRESS: process.env.VITE_STATE_MANAGER_ADDRESS,
-    VITE_CHAIN_ID: process.env.VITE_CHAIN_ID,
+    STATE_MANAGER_ADDRESS: process.env.STATE_MANAGER_ADDRESS,
+    CHAIN_ID: process.env.CHAIN_ID,
   }
   // Remove undefined to keep the payload clean
   return Object.fromEntries(
     Object.entries(cfg).filter(([_, v]) => v !== undefined && v !== null)
   )
 }
+
+// Log runtime config on the server so production deployments can be verified
+// from container logs (useful for Cloud Run / Docker deployments).
+console.info('server-runtime-config', getRuntimeConfig());
 
 // SPA fallback with runtime config injection
 app.get('*', (_req, res) => {

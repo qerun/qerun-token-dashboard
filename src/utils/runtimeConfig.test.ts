@@ -21,12 +21,12 @@ describe('runtime config resolution', () => {
 
   it('prioritizes window.__RUNTIME_CONFIG over process.env', async () => {
     global.window.__RUNTIME_CONFIG = {
-      VITE_STATE_MANAGER_ADDRESS: '0x123',
-      VITE_CHAIN_ID: '1',
+      STATE_MANAGER_ADDRESS: '0x123',
+      CHAIN_ID: '1',
     };
     global.process.env = {
-      VITE_STATE_MANAGER_ADDRESS: '0x456',
-      VITE_CHAIN_ID: '2',
+      STATE_MANAGER_ADDRESS: '0x456',
+      CHAIN_ID: '2',
     };
 
     const { CONTRACT_CONFIG } = await import('../config');
@@ -38,8 +38,8 @@ describe('runtime config resolution', () => {
   it('falls back to process.env when window.__RUNTIME_CONFIG is missing', async () => {
     global.window.__RUNTIME_CONFIG = undefined;
     global.process.env = {
-      VITE_STATE_MANAGER_ADDRESS: '0x456',
-      VITE_CHAIN_ID: '2',
+      STATE_MANAGER_ADDRESS: '0x456',
+      CHAIN_ID: '2',
     };
 
     const { CONTRACT_CONFIG } = await import('../config');
@@ -50,7 +50,7 @@ describe('runtime config resolution', () => {
 
   it('uses chainId "97" as is', async () => {
     global.window.__RUNTIME_CONFIG = {
-      VITE_CHAIN_ID: '97',
+      CHAIN_ID: '97',
     };
 
     const { CONTRACT_CONFIG } = await import('../config');

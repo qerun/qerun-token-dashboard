@@ -1,0 +1,20 @@
+services:
+  dashboard-dev:
+    image: node:20
+    container_name: qerun-token-dashboard-dev
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      # ensure Vite binds to all interfaces so the host can reach the dev server
+      VITE_HOST: "0.0.0.0"
+    # Mount project into container so edits are live
+    volumes:
+      - ./:/app:cached
+      # keep node_modules inside the container (avoid host/OS mismatch)
+      - /app/node_modules
+    ports:
+      - "5173:5173" # vite dev server
+    # run Vite bound to 0.0.0.0 so it's reachable from host/other containers
+    command: sh -c "npm ci --silent && npm run dev -- --host 0.0.0.0"
+    stdin_open: true
+    tty: true

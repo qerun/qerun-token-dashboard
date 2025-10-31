@@ -1,5 +1,7 @@
 # Build stage
 FROM node:20-alpine AS build
+ARG NODE_OPTIONS=--max_old_space_size=4096
+ENV NODE_OPTIONS=${NODE_OPTIONS}
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache python3 make g++ && npm ci
