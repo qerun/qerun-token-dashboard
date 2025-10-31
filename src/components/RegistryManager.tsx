@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { ethers, isAddress } from 'ethers';
 import { Paper, Typography, Box, Button, TextField, Stack, Alert, Chip, IconButton, Tooltip, MenuItem, Switch, FormControlLabel, Checkbox } from '@mui/material';
 import ContentCopy from '@mui/icons-material/ContentCopy';
@@ -18,6 +18,7 @@ interface RegistryEntry {
   hasStateManagerSetter?: boolean;
   isGovernanceEnabled?: boolean;
   contractStateManager?: string | null;
+  loading?: boolean;
 }
 
 interface RegistryManagerProps {
@@ -40,16 +41,17 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   const [newEntryType, setNewEntryType] = useState<number>(1); // Default to address
 
   // Helper function to detect if address is a contract and has setStateManager function
-  const detectContractCapabilities = async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, isGovernanceEnabled?: boolean, contractStateManager?: string | null}> => {
+  // Wrapped in useCallback so its identity is stable and doesn't force loadRegistry to be recreated on every render.
+  const detectContractCapabilities = React.useCallback(async (address: string, provider: ethers.BrowserProvider): Promise<{isContract: boolean, hasStateManagerSetter?: boolean, isGovernanceEnabled?: boolean, contractStateManager?: string | null}> => {
     try {
       const code = await provider.getCode(address);
       if (code === '0x') {
         return { isContract: false };
       }
 
-  let hasStateManagerSetter = false;
-  let isGovernanceEnabled = undefined as boolean | undefined;
-  let contractStateManager: string | null | undefined = undefined;
+      let hasStateManagerSetter = false;
+      let isGovernanceEnabled = undefined as boolean | undefined;
+      let contractStateManager: string | null | undefined = undefined;
 
       // Check if contract has setStateManager function by looking for the selector in runtime bytecode
       try {
@@ -88,7 +90,7 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
     } catch {
       return { isContract: false };
     }
-  };
+  }, []);
 
   const loadRegistry = useCallback(async () => {
 
@@ -105,8 +107,99 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       try {
         if (typeof (stateManager as any).queryFilter === 'function') {
           const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
-          const granted = await (stateManager as any).queryFilter(stateManager.filters.RoleGranted(DEFAULT_ADMIN_ROLE), 0, 'latest');
-          const revoked = await (stateManager as any).queryFilter(stateManager.filters.RoleRevoked(DEFAULT_ADMIN_ROLE), 0, 'latest');
+
+          // Helper: queryFilter in chunks to avoid providers that reject large eth_getLogs requests
+          const queryFilterChunked = async (contract: any, filter: any, fromB: number | string, toB: number | string, step = 2000) => {
+            const results: any[] = [];
+            const latest = typeof toB === 'string' && toB === 'latest' ? await provider.getBlockNumber() : Number(toB);
+            let start = Number(fromB ?? 0);
+            // guard: if from is negative or NaN, start at 0
+            if (!Number.isFinite(start) || start < 0) start = 0;
+
+            // Safety caps to avoid hammering the provider
+            const MAX_TOTAL_REQUESTS = 500; // absolute cap for this operation
+            let totalRequests = 0;
+            let consecutiveFailures = 0;
+            const MAX_CONSECUTIVE_FAILURES = 10; // abort early if provider keeps failing
+
+            const shouldAbort = () => totalRequests >= MAX_TOTAL_REQUESTS || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES;
+            // Rate limiting: ensure we make at most one RPC request per second
+            const REQUEST_INTERVAL_MS = 1000; // 1 request per second
+            let lastRequestAt = 0;
+            const ensureRateLimit = async () => {
+              const now = Date.now();
+              const since = now - lastRequestAt;
+              if (since < REQUEST_INTERVAL_MS) {
+                await new Promise((r) => setTimeout(r, REQUEST_INTERVAL_MS - since));
+              }
+              lastRequestAt = Date.now();
+            };
+
+            while (start <= latest) {
+              if (shouldAbort()) {
+                console.warn('queryFilterChunked: aborting early due to too many requests or consecutive failures', { totalRequests, consecutiveFailures });
+                setStatus && setStatus('Partial results returned: provider limited historical queries. Try a dedicated RPC or reduce range.');
+                break;
+              }
+
+              const end = Math.min(latest, start + step - 1);
+              try {
+                // rate limit before making the request
+                await ensureRateLimit();
+                totalRequests++;
+                // ethers.Contract.queryFilter(filter, fromBlock, toBlock)
+                const chunk = await contract.queryFilter(filter, start, end);
+                consecutiveFailures = 0;
+                if (Array.isArray(chunk) && chunk.length > 0) results.push(...chunk);
+              } catch (err) {
+                consecutiveFailures++;
+                // If a chunk still fails, try smaller chunks recursively. We allow shrinking down to single-block attempts.
+                if (step > 1) {
+                  const half = Math.max(1, Math.floor(step / 2));
+                  const partial = await queryFilterChunked(contract, filter, start, end, half);
+                  results.push(...partial);
+                } else {
+                  // step == 1: single-block attempts. Try each block individually with a couple retries and exponential backoff; otherwise skip the block and continue.
+                  for (let b = start; b <= end; b++) {
+                    if (shouldAbort()) break;
+                    let retries = 3;
+                    let succeeded = false;
+                    let backoff = 200;
+                    while (retries-- > 0 && !succeeded) {
+                      try {
+                        // rate limit before each per-block request
+                        await ensureRateLimit();
+                        totalRequests++;
+                        const single = await contract.queryFilter(filter, b, b);
+                        consecutiveFailures = 0;
+                        if (Array.isArray(single) && single.length > 0) results.push(...single);
+                        succeeded = true;
+                      } catch (blockErr) {
+                        consecutiveFailures++;
+                        await new Promise((r) => setTimeout(r, backoff));
+                        backoff = Math.min(2000, backoff * 2);
+                      }
+                    }
+                    if (!succeeded) {
+                      console.warn(`queryFilterChunked: skipping block ${b} due to repeated errors`);
+                    }
+                  }
+                }
+              }
+              start = end + 1;
+            }
+            return results;
+          };
+
+          // Avoid scanning from block 0 to prevent huge historical queries.
+          // Scan a recent window instead (configurable). Use a default of the last 50k blocks.
+          const DEFAULT_SCAN_WINDOW = 50000;
+          const currentBlock = await provider.getBlockNumber();
+          const scanFrom = Math.max(0, currentBlock - DEFAULT_SCAN_WINDOW);
+
+          const granted = await queryFilterChunked(stateManager, stateManager.filters.RoleGranted(DEFAULT_ADMIN_ROLE), scanFrom, 'latest');
+          const revoked = await queryFilterChunked(stateManager, stateManager.filters.RoleRevoked(DEFAULT_ADMIN_ROLE), scanFrom, 'latest');
+
           const admins = new Set<string>();
           for (const ev of granted) {
             try {
@@ -137,18 +230,32 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
         'TREASURY_APPLY_GOVERNANCE',
       ];
 
-      const loadedEntries: RegistryEntry[] = [];
+      // Initialize UI rows immediately so registry shows even when properties are loading
+      const initialEntries: RegistryEntry[] = knownIds.map((id) => ({
+        id,
+        value: '…',
+        valueType: 0,
+        requiredRole: '',
+        isImmutable: false,
+        loading: true,
+      }));
+      setEntries(initialEntries);
 
-      for (const id of knownIds) {
+      // Load each entry in parallel and update the entry when data becomes available
+      await Promise.all(knownIds.map(async (id) => {
         try {
           const has = await stateManager.has(id);
-          if (!has) continue;
+          if (!has) {
+            // mark as not set
+            setEntries((prev) => prev.map((e) => e.id === id ? { ...e, value: 'not set', valueType: 0, loading: false } : e));
+            return;
+          }
 
           const metadata = await stateManager.getMetadata(id);
           const valueType = Number(metadata[0]);
           const requiredRole = metadata[1];
 
-          let value: string;
+          let value: string = '';
           let isContract = false;
           let hasStateManagerSetter = false;
           let isGovernanceEnabled: boolean | undefined = undefined;
@@ -157,30 +264,43 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           switch (valueType) {
             case 1: { // ADDRESS
               value = await stateManager.addressOf(id);
-              // Check if this address is a contract and has setStateManager function
-              const contractInfo = await detectContractCapabilities(value, provider);
-              isContract = contractInfo.isContract;
-              hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
-              isGovernanceEnabled = contractInfo.isGovernanceEnabled;
-              contractStateManager = contractInfo.contractStateManager ?? null;
-              // Debug: log detected capability for developer verification
-              // eslint-disable-next-line no-console
-              console.debug(`RegistryManager: ${id} -> isContract=${isContract}, hasStateManagerSetter=${hasStateManagerSetter}, isGovernanceEnabled=${String(isGovernanceEnabled)}`);
+              // Check capabilities but don't block UI
+              try {
+                const contractInfo = await detectContractCapabilities(value, provider);
+                isContract = contractInfo.isContract;
+                hasStateManagerSetter = contractInfo.hasStateManagerSetter || false;
+                isGovernanceEnabled = contractInfo.isGovernanceEnabled;
+                contractStateManager = contractInfo.contractStateManager ?? null;
+              } catch (err) {
+                // ignore capability errors
+              }
               break;
             }
             case 2: { // UINT256
-              const uintValue = await stateManager.getUint(id);
-              value = uintValue.toString();
+              try {
+                const uintValue = await stateManager.getUint(id);
+                value = uintValue.toString();
+              } catch {
+                value = 'error';
+              }
               break;
             }
             case 3: { // BOOL
-              const boolValue = await stateManager.getBool(id);
-              value = boolValue ? 'true' : 'false';
+              try {
+                const boolValue = await stateManager.getBool(id);
+                value = boolValue ? 'true' : 'false';
+              } catch {
+                value = 'error';
+              }
               break;
             }
             case 4: { // BYTES32
-              const bytesValue = await stateManager.getBytes32(id);
-              value = bytesValue;
+              try {
+                const bytesValue = await stateManager.getBytes32(id);
+                value = bytesValue;
+              } catch {
+                value = 'error';
+              }
               break;
             }
             default:
@@ -190,7 +310,6 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
           // Normalize requiredRole into a hex string and compare to IMMUTABLE_ROLE robustly
           let roleHex: string;
           try {
-            // ethers.hexlify will convert BytesLike or number[] into a hex string; if requiredRole is already a string this returns the same
             roleHex = ethers.hexlify(requiredRole as any);
           } catch {
             roleHex = String(requiredRole || '');
@@ -198,12 +317,9 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
 
           const isImmutable = roleHex.toLowerCase() === String(IMMUTABLE_ROLE).toLowerCase();
 
-          // Debugging: helpful output when inspecting why an entry isn't flagged immutable
-          // eslint-disable-next-line no-console
-          console.debug(`RegistryManager: id=${id} requiredRole=${roleHex} IMMUTABLE=${String(IMMUTABLE_ROLE)} isImmutable=${isImmutable}`);
-
-          loadedEntries.push({
-            id,
+          // Update the entry in state (partial updates are OK)
+          setEntries((prev) => prev.map((e) => e.id === id ? ({
+            ...e,
             value,
             valueType,
             requiredRole,
@@ -212,13 +328,13 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
             hasStateManagerSetter,
             isGovernanceEnabled,
             contractStateManager,
-          });
+            loading: false,
+          }) : e));
         } catch (err) {
           console.warn(`Failed to load registry entry ${id}:`, err);
+          setEntries((prev) => prev.map((e) => e.id === id ? { ...e, value: 'error', loading: false } : e));
         }
-      }
-
-      setEntries(loadedEntries);
+      }));
       setStatus(null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -226,6 +342,19 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       setEntries([]);
     }
   }, [detectContractCapabilities]);
+
+  // Auto-load registry once on mount and when wallet connection status changes.
+  // This keeps the UX friendly (shows entries immediately) while retaining
+  // the rate-limit / chunking protections in `loadRegistry` to avoid RPC floods.
+  useEffect(() => {
+    // call but don't await here; loadRegistry manages its own state and errors
+    try {
+      loadRegistry();
+    } catch (err) {
+      // swallow - loadRegistry handles errors and status messages
+    }
+    // Intentionally depend on loadRegistry (stable via useCallback) and hasWallet
+  }, [loadRegistry, hasWallet]);
 
   // Function to set StateManager for a contract
   const setContractStateManager = async (entry: RegistryEntry, newStateManagerAddress: string) => {
@@ -294,9 +423,8 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
     }
   };
 
-  useEffect(() => {
-    loadRegistry();
-  }, [loadRegistry]);
+  // NOTE: Automatic registry polling disabled to avoid hammering RPC providers.
+  // Use the "Refresh" button to load registry on demand.
 
   const handleEdit = (entry: RegistryEntry) => {
     setEditingId(entry.id);
@@ -493,7 +621,18 @@ const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
       )}
 
       {!hasWallet && (
-        <Alert severity="warning" sx={{ mb: 2 }}>No wallet detected. Connect with an admin account to edit registry entries.</Alert>
+        <>
+          <Alert severity="warning" sx={{ mb: 2 }}>No wallet detected. Connect with an admin account to edit registry entries.</Alert>
+          <Box sx={{ mb: 2 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => window.open('https://faucet.quicknode.com/binance-smart-chain/bnb-testnet', '_blank')}
+            >
+              Get BNB (BNB Testnet Faucet)
+            </Button>
+          </Box>
+        </>
       )}
 
       <Stack spacing={2}>

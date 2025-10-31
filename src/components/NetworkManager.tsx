@@ -205,26 +205,6 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
       <Button
         color="primary"
         variant="contained"
-        onClick={handleAddQER}
-        sx={{
-          borderRadius: 'var(--qerun-radius-xl, 16px)'
-        }}
-      >
-        Add QER Token
-      </Button>
-      <Button
-        color="primary"
-        variant="contained"
-        onClick={handleAddUSDQ}
-        sx={{
-          borderRadius: 'var(--qerun-radius-xl, 16px)'
-        }}
-      >
-        Add USDQ Token
-      </Button>
-      <Button
-        color="primary"
-        variant="contained"
         onClick={handleFundMeUSDQ}
         sx={{
           borderRadius: 'var(--qerun-radius-xl, 16px)',
@@ -236,6 +216,21 @@ const NetworkManager: React.FC<Props> = ({ onAfterSwitch }) => {
         }}
       >
         Fund me 200 USDQ (test)
+      </Button>
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={() => window.open('https://faucet.quicknode.com/binance-smart-chain/bnb-testnet', '_blank')}
+        sx={{
+          borderRadius: 'var(--qerun-radius-xl, 16px)',
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.getContrastText(theme.palette.primary.main),
+          '&:hover': {
+            backgroundColor: theme.palette.primary.dark,
+          },
+        }}
+      >
+        Get BNB (faucet)
       </Button>
     </Stack>
   );

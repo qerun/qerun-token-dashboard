@@ -26,6 +26,10 @@ function getRuntimeConfig() {
   )
 }
 
+// Log runtime config on the server so production deployments can be verified
+// from container logs (useful for Cloud Run / Docker deployments).
+console.info('server-runtime-config', getRuntimeConfig());
+
 // SPA fallback with runtime config injection
 app.get('*', (_req, res) => {
   const indexPath = path.join(distDir, 'index.html')
