@@ -1,8 +1,47 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NetworkManager from './NetworkManager';
-import { addTokenToWallet, switchToNetwork, getNetworkName } from '../utils/wallet';
+
+// Mock ethers before importing the component
+vi.mock('ethers', () => ({
+  ethers: {
+    BrowserProvider: vi.fn(() => ({
+      request: vi.fn().mockImplementation(async ({ method, params }) => {
+        if (method === 'eth_call') {
+          const [callData] = params;
+          if (callData.data === '0x95d89b41') { // symbol()
+            // Return ABI-encoded string "QER" or "USDQ"
+            const symbol = callData.to === '0x123' ? 'QER' : 'USDQ';
+            const symbolHex = Buffer.from(symbol).toString('hex');
+            const lenHex = symbol.length.toString(16);
+            const offset = '0000000000000000000000000000000000000000000000000000000000000020';
+            const length = '0'.repeat(64 - lenHex.length) + lenHex;
+            const data = symbolHex.padEnd(64, '0');
+            const encoded = '0x' + offset + length + data;
+            return encoded;
+          } else if (callData.data === '0x313ce567') { // decimals()
+            return '0x' + '0000000000000000000000000000000000000000000000000000000000000012'; // 18
+          }
+        }
+        return '0x';
+      }),
+    })),
+    Contract: class MockContract {
+      has = vi.fn().mockResolvedValue(true);
+      addressOf = vi.fn().mockImplementation((id) => {
+        if (id === 'MAIN_CONTRACT') return '0x123';
+        if (id === 'PRIMARY_QUOTE') return '0x456';
+        return '0x0000000000000000000000000000000000000000';
+      });
+    },
+    ZeroAddress: '0x0000000000000000000000000000000000000000',
+  },
+}));
+
+// Mock StateManagerAbi
+vi.mock('../abi/StateManager.json', () => ({
+  default: { abi: [] },
+}));
 
 // Mock the wallet utilities
 vi.mock('../utils/wallet', () => ({
@@ -11,20 +50,20 @@ vi.mock('../utils/wallet', () => ({
   getNetworkName: vi.fn(),
 }));
 
-// Mock the tokens config
-vi.mock('../config/tokens', () => ({
-  TOKENS: {
-    QER: { address: '0x123', symbol: 'QER', decimals: 18 },
-    USDQ: { address: '0x456', symbol: 'USDQ', decimals: 18 },
-  },
-}));
-
 // Mock the config
 vi.mock('../config', () => ({
   CONTRACT_CONFIG: {
     chainId: '97',
+    stateManager: '0xstateManager',
+  },
+  REGISTRY_IDS: {
+    MAIN_CONTRACT: 'MAIN_CONTRACT',
+    PRIMARY_QUOTE: 'PRIMARY_QUOTE',
   },
 }));
+
+import NetworkManager from './NetworkManager';
+import { addTokenToWallet, switchToNetwork, getNetworkName } from '../utils/wallet';
 
 describe('NetworkManager', () => {
   const mockAddTokenToWallet = vi.mocked(addTokenToWallet);

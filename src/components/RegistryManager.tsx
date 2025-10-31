@@ -26,7 +26,7 @@ interface RegistryManagerProps {
 
 const RegistryManager: React.FC<RegistryManagerProps> = ({ hasWallet }) => {
   // Precompute role hashes for stable comparisons (use keccak256 UTF-8 of the role name)
-  const IMMUTABLE_ROLE = ethers.keccak256(ethers.toUtf8Bytes('IMMUTABLE'));
+  const IMMUTABLE_ROLE = ethers.id('IMMUTABLE');
   const [entries, setEntries] = useState<RegistryEntry[]>([]);
   const [adminAccounts, setAdminAccounts] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
