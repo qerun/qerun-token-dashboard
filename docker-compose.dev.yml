@@ -17,7 +17,7 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173" # vite dev server
-  # run Vite bound to 0.0.0.0 so it's reachable from host/other containers
-  command: sh -c "npm ci --silent && npm run dev -- --host 0.0.0.0"
+    # run Vite bound to 0.0.0.0 so it's reachable from host/other containers
+    command: sh -c "npm ci --silent && npm run dev -- --host 0.0.0.0"
     stdin_open: true
     tty: true
